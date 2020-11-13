@@ -1,6 +1,6 @@
 # fav README
 
-This is the README for your extension "fav". After writing up a brief description, we recommend including the following sections.
+Fav is small and handy extension which lets you bookmark/favorite files you open use and keep them at a keyboard shortcut's reach
 
 ## Features
 
