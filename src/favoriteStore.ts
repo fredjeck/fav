@@ -3,7 +3,7 @@ import { Favorite, FavoriteKind } from './favorite';
 
 export class FavoriteStore {
 
-    private static readonly FAV_STORE_STATE_KEY = "fav.store";
+    private static readonly FAV_STORE_STATE_KEY = 'fav.store';
 
     private _onFavoriteAdded: vscode.EventEmitter<Favorite> = new vscode.EventEmitter();
     readonly onFavoriteAdded: vscode.Event<Favorite> = this._onFavoriteAdded.event;
@@ -48,7 +48,7 @@ export class FavoriteStore {
     // Todo change the way we refer to the store
     public static current(): FavoriteStore {
         if (!FavoriteStore._instance) {
-            throw new Error("Favorites store has not been initialized prior its first access");
+            throw new Error('Favorites store has not been initialized prior its first access');
         }
         return FavoriteStore._instance;
     }

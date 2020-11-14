@@ -52,8 +52,8 @@
         }
       },
       {
-        "command": "fav.context.deleteFavorite",
-        "title": "Delete",
+        "command": "fav.context.removeFavorite",
+        "title": "Remove",
         "icon": {
           "light": "resources/light/trash.svg",
           "dark": "resources/dark/trash.svg"
@@ -109,7 +109,7 @@
           "command": "fav.context.renameFavorite"
         },
         {
-          "command": "fav.context.deleteFavorite"
+          "command": "fav.context.removeFavorite"
         }
       ],
       "view/title": [

@@ -1,4 +1,4 @@
-import { ThemeIcon, TreeItem, TreeItemCollapsibleState, Uri } from "vscode";
+import { ThemeIcon, TreeItem, TreeItemCollapsibleState, Uri } from 'vscode';
 import { v4 as uuidv4 } from 'uuid';
 
 export class Favorite {
