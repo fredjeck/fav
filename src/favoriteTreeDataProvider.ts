@@ -23,12 +23,14 @@ export class FavoritesTreeDataProvider  implements TreeDataProvider<Favorite>{
     }
 
     getParent(element:Favorite): ProviderResult<Favorite>{
-        return undefined;
+        return element.parent;
     }
 
     getChildren(element?: Favorite): ProviderResult<Favorite[]> {
         if(!element){
             return this._store.favorites();
+        }else if(element && element.children && element.children.length >0){
+            return element.children;
         }
         return undefined;
     }

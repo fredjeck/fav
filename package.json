@@ -12,6 +12,7 @@
   "activationEvents": [
     "onCommand:fav.favoriteActiveFile",
     "onCommand:fav.openFavorite",
+    "onCommand:fav.createGroup",
     "onView:favorites"
   ],
   "main": "./out/extension.js",
@@ -22,8 +23,16 @@
         "title": "Favorites: Add active file to favorites"
       },
       {
+        "command": "fav.favoriteActiveFileToGroup",
+        "title": "Favorites: Add active file to group"
+      },
+      {
         "command": "fav.openFavorite",
         "title": "Favorites: Open favorite"
+      },
+      {
+        "command": "fav.createGroup",
+        "title": "Favorites: Create group"
       },
       {
         "command": "fav.renameFavorite",

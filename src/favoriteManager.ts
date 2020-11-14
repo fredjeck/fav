@@ -30,8 +30,39 @@ export class FavoriteManager {
 
                 this._store.add(fav);
                 this._treeView.reveal(fav);
-                vscode.window.showInformationMessage('Current Editor Added to favorites');
             });
+
+        }
+    }
+
+    favoriteActiveFileToGroup(): void {
+        if (vscode.window.activeTextEditor) {
+
+            let groups = this._store.groups();
+            if(!groups){
+                vscode.window.showWarningMessage("No favorite groups found, please define a group first");
+                return;
+            }
+
+            vscode.window.showQuickPick(groups).then(selection => {
+                if (selection) {
+                    vscode.window.showInputBox({ prompt: 'Label', value: vscode.window.activeTextEditor?.document.uri.fsPath || '' }).then((v) => {
+                        if (!v) { return; }
+        
+                        let fav = new Favorite();
+                        fav.label = v;
+                        fav.resourcePath = vscode.window.activeTextEditor?.document.uri.fsPath || '';
+                        fav.kind = FavoriteKind.file;
+        
+                        selection.children.push(fav);
+
+                        this._store.update(selection);
+                        this._treeView.reveal(fav);
+                    });
+                }
+            });
+
+           
 
         }
     }
@@ -41,6 +72,19 @@ export class FavoriteManager {
             if (selection) {
                 vscode.window.showTextDocument(selection.resourceUri, { preview: false });
             }
+        });
+    }
+
+    createGroup():void{
+        vscode.window.showInputBox({ prompt: 'New favorite group name :', value: 'New group' }).then((v) => {
+            if (!v) { return; }
+
+            let fav = new Favorite();
+            fav.label = v;
+            fav.kind = FavoriteKind.group;
+
+            this._store.add(fav);
+            this._treeView.reveal(fav);
         });
     }
 
@@ -74,7 +118,9 @@ export class FavoriteManager {
      */
     registerCommands(context: vscode.ExtensionContext): void {
         context.subscriptions.push(vscode.commands.registerCommand('fav.favoriteActiveFile', this.favoriteActiveFile, this));
+        context.subscriptions.push(vscode.commands.registerCommand('fav.favoriteActiveFileToGroup', this.favoriteActiveFileToGroup, this));
         context.subscriptions.push(vscode.commands.registerCommand('fav.openFavorite', this.openFavorite, this));
+        context.subscriptions.push(vscode.commands.registerCommand('fav.createGroup', this.createGroup, this));
         context.subscriptions.push(vscode.commands.registerCommand('fav.deleteFavorite', this.deleteFavorite, this));
         context.subscriptions.push(vscode.commands.registerCommand('fav.renameFavorite', this.renameFavorite, this));
         context.subscriptions.push(vscode.commands.registerCommand('fav.openResource', resource => this.openResource(resource)));

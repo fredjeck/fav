@@ -6,6 +6,8 @@ export class Favorite {
     resourcePath: string;
     label: string;
     uuid: string;
+    children: Favorite[] = [];
+    parent?: Favorite;
 
     get description(): string | undefined {
         return this.label !== this.resourcePath ? this.resourcePath : undefined;
@@ -23,17 +25,24 @@ export class Favorite {
     }
 
     toTreeItem(): TreeItem {
-        let item = new TreeItem(this.label, TreeItemCollapsibleState.None);
-        item.label = this.label;
-        item.resourceUri = this.resourceUri;
-        item.iconPath = FavoriteKind.file === this.kind ? ThemeIcon.File : ThemeIcon.Folder;
-        item.tooltip = this.resourcePath;
-        item.command = {
-            command: 'fav.openResource',
-            arguments: [item.resourceUri],
-            title: 'Open Favorite'
-        };
-        return item;
+        if (FavoriteKind.file === this.kind) {
+            let item = new TreeItem(this.label, TreeItemCollapsibleState.None );
+            item.label = this.label;
+            item.resourceUri = this.resourceUri;
+            item.iconPath = ThemeIcon.File ;
+            item.tooltip =  this.resourcePath;
+            item.command = {
+                command: 'fav.openResource',
+                arguments: [item.resourceUri],
+                title: 'Open Favorite'
+            };
+            return item;
+        } else {
+            let item = new TreeItem(this.label, TreeItemCollapsibleState.Collapsed);
+            item.label = this.label;
+            item.iconPath = ThemeIcon.Folder;
+            return item;
+        }
     }
 }
 
