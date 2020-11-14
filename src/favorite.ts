@@ -32,7 +32,7 @@ export class Favorite {
             item.iconPath = ThemeIcon.File ;
             item.tooltip =  this.resourcePath;
             item.command = {
-                command: 'fav.openResource',
+                command: 'fav.context.openResource',
                 arguments: [item.resourceUri],
                 title: 'Open Favorite'
             };

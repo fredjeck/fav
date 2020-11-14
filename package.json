@@ -10,49 +10,58 @@
     "Other"
   ],
   "activationEvents": [
-    "onCommand:fav.favoriteActiveFile",
-    "onCommand:fav.openFavorite",
-    "onCommand:fav.createGroup",
+    "onCommand:fav.palette.favoriteActiveFile",
+    "onCommand:fav.palette.openFavorite",
+    "onCommand:fav.palette.createGroup",
+    "onCommand:fav.palette.favoriteActiveFileToGroup",
     "onView:favorites"
   ],
   "main": "./out/extension.js",
   "contributes": {
     "commands": [
       {
-        "command": "fav.favoriteActiveFile",
+        "command": "fav.palette.favoriteActiveFile",
         "title": "Favorites: Add active file to favorites"
       },
       {
-        "command": "fav.favoriteActiveFileToGroup",
-        "title": "Favorites: Add active file to group"
+        "command": "fav.palette.favoriteActiveFileToGroup",
+        "title": "Favorites: Add active file to favorites group"
       },
       {
-        "command": "fav.openFavorite",
+        "command": "fav.palette.openFavorite",
         "title": "Favorites: Open favorite"
       },
       {
-        "command": "fav.createGroup",
-        "title": "Favorites: Create group"
+        "command": "fav.palette.createGroup",
+        "title": "Favorites: Create new group"
       },
       {
-        "command": "fav.renameFavorite",
-        "title": "Edit",
+        "command": "fav.view.createGroup",
+        "title": "Add new group",
+        "icon": {
+          "light": "resources/light/new-folder.svg",
+          "dark": "resources/dark/new-folder.svg"
+        }
+      },
+      {
+        "command": "fav.context.renameFavorite",
+        "title": "Rename",
         "icon": {
           "light": "resources/light/edit.svg",
           "dark": "resources/dark/edit.svg"
         }
       },
       {
-        "command": "fav.deleteFavorite",
-        "title": "Remove",
+        "command": "fav.context.deleteFavorite",
+        "title": "Delete",
         "icon": {
           "light": "resources/light/trash.svg",
           "dark": "resources/dark/trash.svg"
         }
       },
       {
-        "command": "fav.openResource",
-        "title": "Open favorite"
+        "command": "fav.context.openResource",
+        "title": "Open resource"
       }
     ],
     "viewsContainers": {
@@ -75,16 +84,38 @@
       ]
     },
     "menus": {
-      "view/item/context": [
+      "commandPalette": [
         {
-          "command": "fav.renameFavorite",
-          "when": "view == favorites",
-          "group": "inline"
+          "command": "fav.palette.favoriteActiveFile",
+          "when": "editorIsOpen"
         },
         {
-          "command": "fav.deleteFavorite",
-          "when": "view == favorites",
-          "group": "inline"
+          "command": "fav.palette.favoriteActiveFileToGroup",
+          "when": "editorIsOpen"
+        },
+        {
+          "command": "fav.palette.openFavorite"
+        },
+        {
+          "command": "fav.palette.createGroup"
+        },
+        {
+          "command": "fav.context.openResource",
+          "when": "false"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "fav.context.renameFavorite"
+        },
+        {
+          "command": "fav.context.deleteFavorite"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "fav.view.createGroup",
+          "group": "navigation"
         }
       ]
     }

@@ -3,6 +3,18 @@ import { Favorite, FavoriteKind } from './favorite';
 import { FavoriteStore } from './favoriteStore';
 import { FavoritesTreeDataProvider } from './favoriteTreeDataProvider';
 
+export enum Commands {
+    palette_favorite_active_file = 'fav.palette.favoriteActiveFile',
+    palette_favorite_active_file_to_group = 'fav.palette.favoriteActiveFileToGroup',
+    palette_favorite_open = 'fav.palette.openFavorite',
+    palette_group_create = 'fav.palette.createGroup',
+    view_group_create = 'fav.view.createGroup',
+    context_favorite_delete = 'fav.context.deleteFavorite',
+    context_favorite_rename = 'fav.context.renameFavorite',
+    context_resource_open = 'fav.context.openResource',
+}
+
+
 export class FavoriteManager {
 
     private _treeView: vscode.TreeView<Favorite>;
@@ -39,7 +51,7 @@ export class FavoriteManager {
         if (vscode.window.activeTextEditor) {
 
             let groups = this._store.groups();
-            if(!groups){
+            if (!groups) {
                 vscode.window.showWarningMessage("No favorite groups found, please define a group first");
                 return;
             }
@@ -48,22 +60,18 @@ export class FavoriteManager {
                 if (selection) {
                     vscode.window.showInputBox({ prompt: 'Label', value: vscode.window.activeTextEditor?.document.uri.fsPath || '' }).then((v) => {
                         if (!v) { return; }
-        
+
                         let fav = new Favorite();
                         fav.label = v;
                         fav.resourcePath = vscode.window.activeTextEditor?.document.uri.fsPath || '';
                         fav.kind = FavoriteKind.file;
-        
                         selection.children.push(fav);
-
                         this._store.update(selection);
+                        fav.parent = selection;
                         this._treeView.reveal(fav);
                     });
                 }
             });
-
-           
-
         }
     }
 
@@ -75,7 +83,7 @@ export class FavoriteManager {
         });
     }
 
-    createGroup():void{
+    createGroup(): void {
         vscode.window.showInputBox({ prompt: 'New favorite group name :', value: 'New group' }).then((v) => {
             if (!v) { return; }
 
@@ -94,7 +102,8 @@ export class FavoriteManager {
 
     deleteFavorite(favorite: Favorite): void {
         if (favorite) {
-            vscode.window.showWarningMessage(`Remove '${favorite.label}' from your favorites ?`, 'Yes', 'No').then(choice => {
+            var message = FavoriteKind.group === favorite.kind ? `Removing the '${favorite.label}' group will also remove all its favorite, proceed ?` : `Remove '${favorite.label}' from your favorites ?`;
+            vscode.window.showWarningMessage(message, 'Yes', 'No').then(choice => {
                 if ('Yes' === choice) {
                     this._store.delete(favorite);
                 }
@@ -117,12 +126,13 @@ export class FavoriteManager {
      * @param context The extension's context
      */
     registerCommands(context: vscode.ExtensionContext): void {
-        context.subscriptions.push(vscode.commands.registerCommand('fav.favoriteActiveFile', this.favoriteActiveFile, this));
-        context.subscriptions.push(vscode.commands.registerCommand('fav.favoriteActiveFileToGroup', this.favoriteActiveFileToGroup, this));
-        context.subscriptions.push(vscode.commands.registerCommand('fav.openFavorite', this.openFavorite, this));
-        context.subscriptions.push(vscode.commands.registerCommand('fav.createGroup', this.createGroup, this));
-        context.subscriptions.push(vscode.commands.registerCommand('fav.deleteFavorite', this.deleteFavorite, this));
-        context.subscriptions.push(vscode.commands.registerCommand('fav.renameFavorite', this.renameFavorite, this));
-        context.subscriptions.push(vscode.commands.registerCommand('fav.openResource', resource => this.openResource(resource)));
+        context.subscriptions.push(vscode.commands.registerCommand(Commands.palette_favorite_active_file, this.favoriteActiveFile, this));
+        context.subscriptions.push(vscode.commands.registerCommand(Commands.palette_favorite_active_file_to_group, this.favoriteActiveFileToGroup, this));
+        context.subscriptions.push(vscode.commands.registerCommand(Commands.palette_favorite_open, this.openFavorite, this));
+        context.subscriptions.push(vscode.commands.registerCommand(Commands.palette_group_create, this.createGroup, this));
+        context.subscriptions.push(vscode.commands.registerCommand(Commands.view_group_create, this.createGroup, this));
+        context.subscriptions.push(vscode.commands.registerCommand(Commands.context_favorite_delete, this.deleteFavorite, this));
+        context.subscriptions.push(vscode.commands.registerCommand(Commands.context_favorite_rename, this.renameFavorite, this));
+        context.subscriptions.push(vscode.commands.registerCommand(Commands.context_resource_open, resource => this.openResource(resource)));
     }
 }

@@ -67,6 +67,7 @@ export class FavoriteStore {
 
     public delete(fav: Favorite): void {
         this._favorites.splice(this._favorites.indexOf(fav), 1);
+        this.context.globalState.update(FavoriteStore.FAV_STORE_STATE_KEY, this._favorites);
         this._onFavoriteDeleted.fire(fav);
     }
 
