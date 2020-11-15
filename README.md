@@ -1,4 +1,4 @@
-# fav README
+# Fav
 
 Fav is small and handy extension which lets you bookmark/favorite files you often use and keep them at a keyboard shortcut's reach.
 
