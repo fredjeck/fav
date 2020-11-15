@@ -36,6 +36,10 @@
         "title": "Favorites: Create new group"
       },
       {
+        "command": "fav.palette.openGroup",
+        "title": "Favorites: Open favorites group"
+      },
+      {
         "command": "fav.view.createGroup",
         "title": "Add new group",
         "icon": {
@@ -98,6 +102,9 @@
         },
         {
           "command": "fav.palette.createGroup"
+        },
+        {
+          "command": "fav.palette.openGroup"
         },
         {
           "command": "fav.context.openResource",

@@ -8,6 +8,7 @@ export enum Commands {
     PaletteFavoriteActiveFileToGroup = 'fav.palette.favoriteActiveFileToGroup',
     PaletteFavoriteOpen = 'fav.palette.openFavorite',
     PaletteGroupCreate = 'fav.palette.createGroup',
+    PaletteGroupOpen = 'fav.palette.openGroup',
     ViewGroupCreate = 'fav.view.createGroup',
     ContextFavoriteRemove = 'fav.context.removeFavorite',
     ContextFavoriteRename = 'fav.context.renameFavorite',
@@ -77,9 +78,23 @@ export class FavoriteManager {
     }
 
     openFavorite(): void {
-        vscode.window.showQuickPick(this._store.favorites()).then(selection => {
+        vscode.window.showQuickPick(this._store.favorites().flatMap(x => {
+            if(FavoriteKind.group === x.kind){
+                return x.children; 
+            }else{
+                return [x];
+            }
+        })).then(selection => {
             if (selection) {
                 vscode.window.showTextDocument(selection.resourceUri, { preview: false });
+            }
+        });
+    }
+
+    openGroup(): void {
+        vscode.window.showQuickPick(this._store.favorites().filter(f => FavoriteKind.group === f.kind)).then(selection => {
+            if (selection) {
+                selection.children.forEach(fav => vscode.window.showTextDocument(fav.resourceUri, { preview: false }));
             }
         });
     }
@@ -131,6 +146,7 @@ export class FavoriteManager {
         context.subscriptions.push(vscode.commands.registerCommand(Commands.PaletteFavoriteActiveFileToGroup, this.favoriteActiveFileToGroup, this));
         context.subscriptions.push(vscode.commands.registerCommand(Commands.PaletteFavoriteOpen, this.openFavorite, this));
         context.subscriptions.push(vscode.commands.registerCommand(Commands.PaletteGroupCreate, this.createGroup, this));
+        context.subscriptions.push(vscode.commands.registerCommand(Commands.PaletteGroupOpen, this.openGroup, this));
         context.subscriptions.push(vscode.commands.registerCommand(Commands.ViewGroupCreate, this.createGroup, this));
         context.subscriptions.push(vscode.commands.registerCommand(Commands.ContextFavoriteRemove, this.removeFavorite, this));
         context.subscriptions.push(vscode.commands.registerCommand(Commands.ContextFavoriteRename, this.renameFavorite, this));
