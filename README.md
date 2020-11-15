@@ -8,7 +8,7 @@ Fav is small and handy extension which lets you bookmark/favorite files you ofte
 
 Fav should work with any file system provider supported by your local VSCode installation. To add a file to your favorites, simply right click any file in the explorer and use the *'Add to favorites'* context menu or from any opened editor use the *'Favorites: Add active file to favorites'* command using the command palette.
 
-![Create Favorites](images/add_favorite.gif)
+![Create Favorites](images/add_favorites.gif)
 
 ### Organize your favorites into groups
 
