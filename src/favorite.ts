@@ -7,7 +7,7 @@ export class Favorite {
     label: string;
     uuid: string;
     children: Favorite[] = [];
-    parent?: Favorite;
+    parent?: string;
 
     get description(): string | undefined {
         return this.label !== this.resourcePath ? this.resourcePath : undefined;
@@ -19,13 +19,13 @@ export class Favorite {
 
     constructor() {
         this.uuid = uuidv4();
-        this.kind = FavoriteKind.undefined;
+        this.kind = FavoriteKind.Undefined;
         this.resourcePath = '';
         this.label = '';
     }
 
     toTreeItem(): TreeItem {
-        if (FavoriteKind.file === this.kind) {
+        if (FavoriteKind.File === this.kind) {
             let item = new TreeItem(this.label, TreeItemCollapsibleState.None );
             item.label = this.label;
             item.resourceUri = this.resourceUri;
@@ -41,14 +41,14 @@ export class Favorite {
             let item = new TreeItem(this.label, TreeItemCollapsibleState.Collapsed);
             item.label = this.label;
             item.iconPath = ThemeIcon.Folder;
+            item.contextValue = 'group';
             return item;
         }
     }
 }
 
 export enum FavoriteKind {
-    undefined = 0,
-    group,
-    file,
-    folder
+    Undefined = 0,
+    Group,
+    File
 }

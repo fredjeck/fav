@@ -30,7 +30,7 @@ export class FavoriteStore {
             if(f.children && f.children.length){
                 fav.children = f.children.map(child=>{
                     let c = Object.assign(new Favorite(), child);
-                    c.parent =f;
+                    c.parent =f.uuid;
                     return c;
                 });
             }
@@ -76,6 +76,6 @@ export class FavoriteStore {
     }
 
     public groups(): Favorite[] {
-        return this._favorites.filter(f => FavoriteKind.group === f.kind);
+        return this._favorites.filter(f => FavoriteKind.Group === f.kind);
     }
 }

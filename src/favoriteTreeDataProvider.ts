@@ -1,6 +1,6 @@
-import { Event, EventEmitter, ProviderResult, ThemeIcon, TreeDataProvider, TreeItem, TreeItemCollapsibleState, Uri } from "vscode";
-import { Favorite } from "./favorite";
-import { FavoriteStore } from "./favoriteStore";
+import { Event, EventEmitter, ProviderResult, ThemeIcon, TreeDataProvider, TreeItem, TreeItemCollapsibleState, Uri } from 'vscode';
+import { Favorite } from './favorite';
+import { FavoriteStore } from './favoriteStore';
 
 export class FavoritesTreeDataProvider  implements TreeDataProvider<Favorite>{
     private _onDidChangeTreeData: EventEmitter<Favorite | undefined | null | void> = new EventEmitter<Favorite | undefined | null | void>();
@@ -23,7 +23,7 @@ export class FavoritesTreeDataProvider  implements TreeDataProvider<Favorite>{
     }
 
     getParent(element:Favorite): ProviderResult<Favorite>{
-        return element.parent;
+        return this._store.groups().find(x => x.uuid === element.parent);
     }
 
     getChildren(element?: Favorite): ProviderResult<Favorite[]> {

@@ -11,9 +11,11 @@
   ],
   "activationEvents": [
     "onCommand:fav.palette.favoriteActiveFile",
+    "onCommand:fav.palette.favoriteActiveFileToGroup",
+    "onCommand:fav.menu.favoriteActiveFile",
+    "onCommand:fav.menu.favoriteActiveFileToGroup",
     "onCommand:fav.palette.openFavorite",
     "onCommand:fav.palette.createGroup",
-    "onCommand:fav.palette.favoriteActiveFileToGroup",
     "onView:favorites"
   ],
   "main": "./out/extension.js",
@@ -64,6 +66,22 @@
         }
       },
       {
+        "command": "fav.menu.favoriteActiveFile",
+        "title": "Add to favorites"
+      },
+      {
+        "command": "fav.menu.favoriteActiveFileToGroup",
+        "title": "Add to favorites group"
+      },
+      {
+        "command": "fav.context.openGroup",
+        "title": "Open favorites group",
+        "icon": {
+          "light": "resources/light/folder-opened.svg",
+          "dark": "resources/dark/folder-opened.svg"
+        }
+      },
+      {
         "command": "fav.context.openResource",
         "title": "Open resource"
       }
@@ -111,12 +129,29 @@
           "when": "false"
         }
       ],
+      "explorer/context": [
+        {
+          "command": "fav.menu.favoriteActiveFile",
+          "group": "commands",
+          "when": "resource && !explorerResourceIsFolder"
+        },
+        {
+          "command": "fav.menu.favoriteActiveFileToGroup",
+          "group": "commands",
+          "when": "resource && !explorerResourceIsFolder"
+        }
+      ],
       "view/item/context": [
         {
           "command": "fav.context.renameFavorite"
         },
         {
           "command": "fav.context.removeFavorite"
+        },
+        {
+          "command": "fav.context.openGroup",
+          "group":"inline",
+          "when": "viewItem == group"
         }
       ],
       "view/title": [
