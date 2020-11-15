@@ -2,7 +2,14 @@
   "name": "fav",
   "displayName": "fav",
   "description": "Bookmark your favorite files and folders",
-  "version": "0.0.1",
+  "version": "1.0.0",
+  "author": {
+    "email": "frederic.jecker@gmail.com",
+    "name": "Frederic Jecker"
+  },
+  "repository": {
+    "url": "https://github.com/fredjeck/fav"
+  },
   "engines": {
     "vscode": "^1.51.0"
   },
@@ -150,7 +157,7 @@
         },
         {
           "command": "fav.context.openGroup",
-          "group":"inline",
+          "group": "inline",
           "when": "viewItem == group"
         }
       ],
