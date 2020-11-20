@@ -37,6 +37,19 @@ export class Favorite {
     }
 
     /**
+     * Converts this Favorite to a Partial Favorite (used for Quick Picks);
+     * @param parent The parent Favorite
+     */
+    toPartial(parent?: Favorite): PartialFavorite {
+        return {
+            label: parent ? `[ ${parent.label} ] ${this.label}` : this.label,
+            description: this.description,
+            resourceUri: this.resourceUri,
+            kind: this.kind
+        };
+    }
+
+    /**
      * Converts the present Favorite to a TreeItem.
      * @returns A TreeItem object
      */
@@ -74,20 +87,20 @@ export class Favorite {
      * If a group is compared with a standard Favorite, the result will be such that the group will appear first in the sorted result
      * @param other The Favorite to compare to
      */
-    compareTo(other: Favorite): number {
-        if (this.kind !== other.kind) {
-            return FavoriteKind.Group === this.kind ? -1 : 1;
-        }
-
-        return this.label.localeCompare(other.label);
-    }
+    compareTo = (other: Favorite | PartialFavorite) => Favorite.comparatorFn(this, other);
 
     /**
      * A comparator helper, useful for instance to be called in Array.sort() calls.
      * @param a A Favorite
      * @param b Another Favorite
      */
-    static comparatorFn = (a: Favorite, b: Favorite) => a.compareTo(b);
+    static comparatorFn(a: Favorite | PartialFavorite, b: Favorite | PartialFavorite) {
+        if (a.kind !== b.kind) {
+            return FavoriteKind.Group === a.kind ? -1 : 1;
+        }
+
+        return a.label.localeCompare(b.label);
+    }
 }
 
 /**
@@ -98,4 +111,11 @@ export enum FavoriteKind {
     Undefined = 0,
     Group, // The favorite is a group which can have children
     File // The favorite points to as single file
+}
+
+export interface PartialFavorite {
+    label: string,
+    description: string | undefined,
+    resourceUri: Uri,
+    kind: FavoriteKind
 }

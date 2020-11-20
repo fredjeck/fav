@@ -49,7 +49,7 @@ export class FavoriteManager {
             return;
         }
 
-        if(this.isResourceDuplicated(path)){
+        if (this.isResourceDuplicated(path)) {
             return;
         }
 
@@ -77,7 +77,7 @@ export class FavoriteManager {
             return;
         }
 
-        if(this.isResourceDuplicated(path)){
+        if (this.isResourceDuplicated(path)) {
             return;
         }
 
@@ -112,9 +112,9 @@ export class FavoriteManager {
     openFavorite(): void {
         vscode.window.showQuickPick(this._store.favorites().flatMap(x => {
             if (FavoriteKind.Group === x.kind) {
-                return x.children;
+                return x.children.map(child => child.toPartial(x));
             } else {
-                return [x];
+                return [x.toPartial()];
             }
         }).sort(Favorite.comparatorFn)).then(selection => {
             if (selection) {
@@ -162,10 +162,10 @@ export class FavoriteManager {
     removeFavorite(favorite: Favorite): void {
         if (favorite) {
             var message = `Remove '${favorite.label}' from your favorites ?`;
-            if(FavoriteKind.Group === favorite.kind && favorite.children && favorite.children.length>0){
-               message =  `Remove the '${favorite.label}' group and all its favorites - ${favorite.children.length} favorite(s) ?`;
+            if (FavoriteKind.Group === favorite.kind && favorite.children && favorite.children.length > 0) {
+                message = `Remove the '${favorite.label}' group and all its favorites - ${favorite.children.length} favorite(s) ?`;
             }
-            
+
             vscode.window.showWarningMessage(message, 'Yes', 'No').then(choice => {
                 if ('Yes' === choice) {
                     this._store.delete(favorite);
@@ -236,7 +236,7 @@ export class FavoriteManager {
      */
     private isResourceDuplicated(resourcePath: string): boolean {
         var fav = this._store.existsInStore(resourcePath);
-        if(fav){
+        if (fav) {
             vscode.window.showErrorMessage(`This resource already exists in your favorites (under the label ${fav.label})`);
             this._treeView.reveal(fav);
             return true;
