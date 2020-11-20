@@ -78,12 +78,11 @@ export class FavoriteStore {
 
     /**
      * Adds a Favorite to the store and notifies all the subscribers of the newly added favorite.
-     * No duplication check is performed.
+     * No duplication check is performed on addition.
      * @emits FavoriteSTore.onFavoriteAdded
      * @param fav The favorite to add
      */
     public add(fav: Favorite): void {
-        // TODO detect duplicates
         this._favorites.push(fav);
         this.context.globalState.update(FavoriteStore.FAV_STORE_STATE_KEY, this._favorites);
         this._onFavoriteAdded.fire(fav);
@@ -121,12 +120,20 @@ export class FavoriteStore {
     }
 
     /**
-   * Returns a copy of all the groups in the store
-   * The returned array is a copy of the underlying storage which contains references to the original Favorites.
-   * Any change to a Favorite in this collection followed by an addition/update operation will commit the changes in the underlying storage.
-   * @returns all the Favorites in the store. 
-   */
+     * Returns a copy of all the groups in the store
+     * The returned array is a copy of the underlying storage which contains references to the original Favorites.
+     * Any change to a Favorite in this collection followed by an addition/update operation will commit the changes in the underlying storage.
+     * @returns all the Favorites in the store. 
+     */
     public groups(): Favorite[] {
         return this._favorites.filter(f => FavoriteKind.Group === f.kind).sort(Favorite.comparatorFn);
     }
+
+    /**
+     * Checks if a resource path already exists in the store
+     * @param path A resource path
+     * @returns The Favorite to which the resource path belongs or undefined if the resource path was never favorited.
+     */
+    public existsInStore = (path: string) => this._favorites.find(x => x.resourcePath === path);
+
 }

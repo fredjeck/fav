@@ -49,6 +49,10 @@ export class FavoriteManager {
             return;
         }
 
+        if(this.isResourceDuplicated(path)){
+            return;
+        }
+
         vscode.window.showInputBox({ prompt: 'Label', value: path }).then((v) => {
             if (!v) { return; }
 
@@ -70,6 +74,10 @@ export class FavoriteManager {
     favoriteActiveFileToGroup(node: any): void {
         let path = this.selectedElementPath(node);
         if (!path) {
+            return;
+        }
+
+        if(this.isResourceDuplicated(path)){
             return;
         }
 
@@ -153,7 +161,11 @@ export class FavoriteManager {
      */
     removeFavorite(favorite: Favorite): void {
         if (favorite) {
-            var message = FavoriteKind.Group === favorite.kind ? `Removing the '${favorite.label}' group will also remove all its favorites, proceed ?` : `Remove '${favorite.label}' from your favorites ?`;
+            var message = `Remove '${favorite.label}' from your favorites ?`;
+            if(FavoriteKind.Group === favorite.kind && favorite.children && favorite.children.length>0){
+               message =  `Remove the '${favorite.label}' group and all its favorites - ${favorite.children.length} favorite(s) ?`;
+            }
+            
             vscode.window.showWarningMessage(message, 'Yes', 'No').then(choice => {
                 if ('Yes' === choice) {
                     this._store.delete(favorite);
@@ -175,6 +187,14 @@ export class FavoriteManager {
                 }
             });
         }
+    }
+
+    /**
+     * Utility function to open a URI in a text editor.
+     * @param resource A resource URI
+     */
+    openResource(resource: vscode.Uri): void {
+        vscode.window.showTextDocument(resource, { preview: false });
     }
 
     /**
@@ -211,10 +231,15 @@ export class FavoriteManager {
     }
 
     /**
-     * Utility function to open a URI in a text editor.
-     * @param resource A resource URI
+     * Prevents a resource from being Favorited twice and displays an error message to the user if the given path is already found in the store.
+     * @param resourcePath The resource path of the resource being favorited
      */
-    openResource(resource: vscode.Uri): void {
-        vscode.window.showTextDocument(resource, { preview: false });
+    private isResourceDuplicated(resourcePath: string): boolean {
+        var fav = this._store.existsInStore(resourcePath);
+        if(fav){
+            vscode.window.showErrorMessage(`This resource already exists in your favorites (under the label ${fav.label})`);
+            return true;
+        }
+        return false;
     }
 }
