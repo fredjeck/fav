@@ -112,11 +112,14 @@ export class FavoriteManager {
     openFavorite(): void {
         vscode.window.showQuickPick(this._store.favorites().flatMap(x => {
             if (FavoriteKind.Group === x.kind) {
-                return x.children.map(child => child.toPartial(x));
+                return x.children.map(child => {
+                    child.description = `  $(folder) ${x.label}`;
+                    return child;
+                });
             } else {
-                return [x.toPartial()];
+                return [x];
             }
-        }).sort(Favorite.comparatorFn)).then(selection => {
+        }).sort(Favorite.ignoreKindComparatorFn)).then(selection => {
             if (selection) {
                 vscode.window.showTextDocument(selection.resourceUri, { preview: false });
             }

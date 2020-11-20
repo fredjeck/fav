@@ -11,11 +11,12 @@ export class Favorite {
     uuid: string; // Unique ID for the for this resource
     children: Favorite[] = []; // When a group, Favorites linked to the group
     parent?: string; // Uuid of the parent Favorite
+    description?: string; // Used only for QuickPick display contains the parent group if any, updated at each display
 
     /**
      * @returns An additional description for the Favorite to be displayed in quick pick items (only if the Favorite has a user defined label)
      */
-    get description(): string | undefined {
+    get detail(): string | undefined {
         return this.label !== this.resourcePath ? this.resourcePath : undefined;
     }
 
@@ -34,24 +35,6 @@ export class Favorite {
         this.kind = FavoriteKind.Undefined;
         this.resourcePath = '';
         this.label = '';
-    }
-
-    /**
-     * Converts this Favorite to a Partial Favorite (used for Quick Picks).
-     * This is not elegant at all.
-     * This comes from the fact that to avoir cyclic references for serialization the child does not store a ref to its parent.
-     * When displaying in QuickPick we need the parent to prepend its label for selection but we do not want to alter the underlying Favorite.
-     * This should be fixed in a future release.
-     * 
-     * @param parent The parent Favorite
-     */
-    toPartial(parent?: Favorite): PartialFavorite {
-        return {
-            label: parent ? `[ ${parent.label} ] ${this.label}` : this.label,
-            description: this.description,
-            resourceUri: this.resourceUri,
-            kind: this.kind
-        };
     }
 
     /**
@@ -92,18 +75,30 @@ export class Favorite {
      * If a group is compared with a standard Favorite, the result will be such that the group will appear first in the sorted result
      * @param other The Favorite to compare to
      */
-    compareTo = (other: Favorite | PartialFavorite) => Favorite.comparatorFn(this, other);
+    compareTo = (other: Favorite) => Favorite.comparatorFn(this, other);
 
     /**
      * A comparator helper, useful for instance to be called in Array.sort() calls.
+     * Compare this Favorite to another one.
+     * Favorites are always compared using their labels. 
+     * If a group is compared with a standard Favorite, the result will be such that the group will appear first in the sorted result
      * @param a A Favorite
      * @param b Another Favorite
      */
-    static comparatorFn(a: Favorite | PartialFavorite, b: Favorite | PartialFavorite) {
+    static comparatorFn(a: Favorite, b: Favorite) {
         if (a.kind !== b.kind) {
             return FavoriteKind.Group === a.kind ? -1 : 1;
         }
+        return a.label.localeCompare(b.label);
+    }
 
+    /**
+     * A comparator helper, useful for instance to be called in Array.sort() calls.
+     * Compare this Favorite to another one and ignores the kind differences
+     * @param a A Favorite
+     * @param b Another Favorite
+     */
+    static ignoreKindComparatorFn(a: Favorite, b: Favorite) {
         return a.label.localeCompare(b.label);
     }
 }
@@ -116,15 +111,4 @@ export enum FavoriteKind {
     Undefined = 0,
     Group, // The favorite is a group which can have children
     File // The favorite points to as single file
-}
-
-/**
- * Used to display favorites in quickpicks.
- * Temporary solution - ugly - find a workaround
- */
-export interface PartialFavorite {
-    label: string,
-    description: string | undefined,
-    resourceUri: Uri,
-    kind: FavoriteKind
 }
