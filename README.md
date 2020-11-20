@@ -41,4 +41,4 @@ None yet but that's just version 1.0.0 😉
 
 ## Miscellaneous
 
-Icon made by [Gregor Cresnar](https://www.flaticon.com/authors/gregor-cresnar)
+Icon made by [Gregor Cresnar](https://www.flaticon.com/authors/gregor-cresnar) and slightly updated by me.

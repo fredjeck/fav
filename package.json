@@ -2,7 +2,7 @@
   "name": "Fav",
   "displayName": "Fav",
   "description": "Bookmark your favorite files",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "author": "FredJeck",
   "publisher": "FredJeck",
   "licence":"MIT",
@@ -11,6 +11,7 @@
     "type": "git",
     "url": "https://github.com/fredjeck/fav.git"
   },
+  "homepage": "https://github.com/fredjeck/fav/blob/main/README.md",
   "bugs": {
 		"url": "https://github.com/fredjeck/fav/issues"
 	},
@@ -177,7 +178,8 @@
     "watch": "tsc -watch -p ./",
     "pretest": "npm run compile && npm run lint",
     "lint": "eslint src --ext ts",
-    "test": "node ./out/test/runTest.js"
+    "test": "node ./out/test/runTest.js",
+    "package": "vsce package -o ./packages"
   },
   "devDependencies": {
     "@types/glob": "^7.1.3",
