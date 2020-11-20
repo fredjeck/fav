@@ -37,7 +37,12 @@ export class Favorite {
     }
 
     /**
-     * Converts this Favorite to a Partial Favorite (used for Quick Picks);
+     * Converts this Favorite to a Partial Favorite (used for Quick Picks).
+     * This is not elegant at all.
+     * This comes from the fact that to avoir cyclic references for serialization the child does not store a ref to its parent.
+     * When displaying in QuickPick we need the parent to prepend its label for selection but we do not want to alter the underlying Favorite.
+     * This should be fixed in a future release.
+     * 
      * @param parent The parent Favorite
      */
     toPartial(parent?: Favorite): PartialFavorite {
@@ -113,6 +118,10 @@ export enum FavoriteKind {
     File // The favorite points to as single file
 }
 
+/**
+ * Used to display favorites in quickpicks.
+ * Temporary solution - ugly - find a workaround
+ */
 export interface PartialFavorite {
     label: string,
     description: string | undefined,
