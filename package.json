@@ -137,6 +137,18 @@
         {
           "command": "fav.context.openResource",
           "when": "false"
+        },
+        {
+          "command": "fav.context.openGroup",
+          "when": "false"
+        },
+        {
+          "command": "fav.menu.favoriteActiveFileToGroup",
+          "when": "false"
+        },
+        {
+          "command": "fav.menu.favoriteActiveFile",
+          "when": "false"
         }
       ],
       "explorer/context": [
