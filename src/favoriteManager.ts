@@ -3,6 +3,9 @@ import { Favorite, FavoriteKind } from './favorite';
 import { FavoriteStore } from './favoriteStore';
 import { FavoritesTreeDataProvider } from './favoriteTreeDataProvider';
 
+/**
+ * Registry of all enabled commands.
+ */
 export enum Commands {
     PaletteFavoriteActiveFile = 'fav.palette.favoriteActiveFile',
     PaletteFavoriteActiveFileToGroup = 'fav.palette.favoriteActiveFileToGroup',
@@ -18,7 +21,9 @@ export enum Commands {
     MenuFavoriteActiveFileToGroup = 'fav.menu.favoriteActiveFileToGroup',
 }
 
-
+/**
+ * Core Extension component.
+ */
 export class FavoriteManager {
 
     private _treeView: vscode.TreeView<Favorite>;
@@ -34,6 +39,10 @@ export class FavoriteManager {
         this.registerCommands(context);
     }
 
+    /**
+     * Adds the selected GUI element to the Favorites list (top level).
+     * @param node An element selected in the GUI.
+     */
     favoriteActiveFile(node: any): void {
         let path = this.selectedElementPath(node);
         if (!path) {
@@ -53,6 +62,11 @@ export class FavoriteManager {
         });
     }
 
+    /**
+     * Adds the selected GUI element to the Favorites list in a group.
+     * Prompts the user via QuickPick for the group to add the Favorite to.
+     * @param node An element selected in the GUI.
+     */
     favoriteActiveFileToGroup(node: any): void {
         let path = this.selectedElementPath(node);
         if (!path) {
@@ -84,6 +98,9 @@ export class FavoriteManager {
         });
     }
 
+    /**
+     * Shows the user a QuickPick in which he can choose the favorite to open.
+     */
     openFavorite(): void {
         vscode.window.showQuickPick(this._store.favorites().flatMap(x => {
             if (FavoriteKind.Group === x.kind) {
@@ -98,8 +115,13 @@ export class FavoriteManager {
         });
     }
 
-    openGroup(fav:Favorite): void {
-        let promise = (fav && FavoriteKind.Group ===fav.kind &&fav.children ) ? Promise.resolve(fav) : vscode.window.showQuickPick(this._store.favorites().filter(f => FavoriteKind.Group === f.kind));
+    /**
+     * Opens all the Favorites registered in the group selected by the user.
+     * Group selection is performed via QuickPick.
+     * @param fav A favorite group, if no group is provied the user will be prompted to pick a group.
+     */
+    openGroup(fav: Favorite): void {
+        let promise = (fav && FavoriteKind.Group === fav.kind && fav.children) ? Promise.resolve(fav) : vscode.window.showQuickPick(this._store.favorites().filter(f => FavoriteKind.Group === f.kind));
 
         promise.then(selection => {
             if (selection) {
@@ -108,6 +130,9 @@ export class FavoriteManager {
         });
     }
 
+    /**
+     * Adds a new group to the favorites bar.
+     */
     createGroup(): void {
         vscode.window.showInputBox({ prompt: 'New favorite group name :', value: 'New group' }).then((v) => {
             if (!v) { return; }
@@ -121,10 +146,11 @@ export class FavoriteManager {
         });
     }
 
-    openResource(resource: vscode.Uri): void {
-        vscode.window.showTextDocument(resource, { preview: false });
-    }
 
+    /**
+     * Deletes a Favorite from the stored Favorites.
+     * @param favorite The Favorite to delete
+     */
     removeFavorite(favorite: Favorite): void {
         if (favorite) {
             var message = FavoriteKind.Group === favorite.kind ? `Removing the '${favorite.label}' group will also remove all its favorites, proceed ?` : `Remove '${favorite.label}' from your favorites ?`;
@@ -135,6 +161,11 @@ export class FavoriteManager {
             });
         }
     }
+
+    /**
+     * Renames a Favorite'
+     * @param favorite The Favorite to rename
+     */
     renameFavorite(favorite: Favorite): void {
         if (favorite) {
             vscode.window.showInputBox({ prompt: 'Rename to', value: favorite.label }).then(value => {
@@ -165,6 +196,10 @@ export class FavoriteManager {
         context.subscriptions.push(vscode.commands.registerCommand(Commands.ContextResourceOpen, resource => this.openResource(resource)));
     }
 
+    /**
+     * Utility function to return the selected element's path.
+     * @param node some kind of object
+     */
     private selectedElementPath(node: any): string | undefined {
         if (node && node.fsPath) {
             return node.fsPath;
@@ -173,5 +208,13 @@ export class FavoriteManager {
         } else {
             return undefined;
         }
+    }
+
+    /**
+     * Utility function to open a URI in a text editor.
+     * @param resource A resource URI
+     */
+    openResource(resource: vscode.Uri): void {
+        vscode.window.showTextDocument(resource, { preview: false });
     }
 }

@@ -2,6 +2,10 @@ import { Event, EventEmitter, ProviderResult, ThemeIcon, TreeDataProvider, TreeI
 import { Favorite } from './favorite';
 import { FavoriteStore } from './favoriteStore';
 
+/**
+ * A TreeDataProvider for Favorites.
+ * @see TreeDataProvider
+ */
 export class FavoritesTreeDataProvider  implements TreeDataProvider<Favorite>{
     private _onDidChangeTreeData: EventEmitter<Favorite | undefined | null | void> = new EventEmitter<Favorite | undefined | null | void>();
     readonly onDidChangeTreeData: Event<Favorite | undefined | null | void> = this._onDidChangeTreeData.event;
