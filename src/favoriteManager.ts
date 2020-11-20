@@ -238,6 +238,7 @@ export class FavoriteManager {
         var fav = this._store.existsInStore(resourcePath);
         if(fav){
             vscode.window.showErrorMessage(`This resource already exists in your favorites (under the label ${fav.label})`);
+            this._treeView.reveal(fav);
             return true;
         }
         return false;
