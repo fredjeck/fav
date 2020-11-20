@@ -34,7 +34,7 @@ export class FavoritesTreeDataProvider  implements TreeDataProvider<Favorite>{
         if(!element){
             return this._store.favorites();
         }else if(element && element.children && element.children.length >0){
-            return element.children;
+            return element.children.sort(Favorite.comparatorFn);
         }
         return undefined;
     }

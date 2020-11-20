@@ -108,7 +108,7 @@ export class FavoriteManager {
             } else {
                 return [x];
             }
-        })).then(selection => {
+        }).sort(Favorite.comparatorFn)).then(selection => {
             if (selection) {
                 vscode.window.showTextDocument(selection.resourceUri, { preview: false });
             }

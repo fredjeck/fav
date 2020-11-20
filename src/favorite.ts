@@ -13,7 +13,7 @@ export class Favorite {
     parent?: string; // Uuid of the parent Favorite
 
     /**
-     * @returns the user defined label if provided, its resource path if not
+     * @returns An additional description for the Favorite to be displayed in quick pick items (only if the Favorite has a user defined label)
      */
     get description(): string | undefined {
         return this.label !== this.resourcePath ? this.resourcePath : undefined;
@@ -40,7 +40,7 @@ export class Favorite {
      * Converts the present Favorite to a TreeItem.
      * @returns A TreeItem object
      */
-    toTreeItem(): TreeItem  {
+    toTreeItem(): TreeItem {
         let item: TreeItem = new TreeItem('Undefined', TreeItemCollapsibleState.None);
         switch (this.kind) {
             case FavoriteKind.File:
@@ -67,6 +67,27 @@ export class Favorite {
         }
         return item;
     }
+
+    /**
+     * Compare this Favorite to another one.
+     * Favorites are always compared using their labels. 
+     * If a group is compared with a standard Favorite, the result will be such that the group will appear first in the sorted result
+     * @param other The Favorite to compare to
+     */
+    compareTo(other: Favorite): number {
+        if (this.kind !== other.kind) {
+            return FavoriteKind.Group === this.kind ? -1 : 1;
+        }
+
+        return this.label.localeCompare(other.label);
+    }
+
+    /**
+     * A comparator helper, useful for instance to be called in Array.sort() calls.
+     * @param a A Favorite
+     * @param b Another Favorite
+     */
+    static comparatorFn = (a: Favorite, b: Favorite) => a.compareTo(b);
 }
 
 /**

@@ -117,16 +117,16 @@ export class FavoriteStore {
      * @returns all the Favorites in the store. 
      */
     public favorites(): Favorite[] {
-        return [...this._favorites];
+        return this._favorites.sort(Favorite.comparatorFn);
     }
 
-      /**
-     * Returns a copy of all the groups in the store
-     * The returned array is a copy of the underlying storage which contains references to the original Favorites.
-     * Any change to a Favorite in this collection followed by an addition/update operation will commit the changes in the underlying storage.
-     * @returns all the Favorites in the store. 
-     */
+    /**
+   * Returns a copy of all the groups in the store
+   * The returned array is a copy of the underlying storage which contains references to the original Favorites.
+   * Any change to a Favorite in this collection followed by an addition/update operation will commit the changes in the underlying storage.
+   * @returns all the Favorites in the store. 
+   */
     public groups(): Favorite[] {
-        return this._favorites.filter(f => FavoriteKind.Group === f.kind);
+        return this._favorites.filter(f => FavoriteKind.Group === f.kind).sort(Favorite.comparatorFn);
     }
 }
