@@ -78,6 +78,26 @@ export class Favorite {
     compareTo = (other: Favorite) => Favorite.comparatorFn(this, other);
 
     /**
+     * Adds a Favorite to this Favorite's children.
+     * @param fav The Favorite to add
+     */
+    addChild(fav: Favorite) {
+        this.children.push(fav);
+        fav.parent = this.uuid;
+    }
+
+    /**
+     * Removes a Favorite from this Favorite's children (if exists).
+     * @param fav The Favorite to remove
+     */
+    removeChild(fav: Favorite) {
+        var index = this.children.findIndex(x => x.uuid === fav.uuid);
+        if (index < 0) { return; }
+        this.children[index].parent = undefined;
+        this.children.splice(index, 1);
+    }
+
+    /**
      * A comparator helper, useful for instance to be called in Array.sort() calls.
      * Compare this Favorite to another one.
      * Favorites are always compared using their labels. 

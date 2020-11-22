@@ -1,5 +1,5 @@
 {
-  "name": "Fav",
+  "name": "fav",
   "displayName": "Fav",
   "description": "Bookmark your favorite files",
   "version": "1.1.0",
@@ -70,6 +70,14 @@
       {
         "command": "fav.context.removeFavorite",
         "title": "Remove",
+        "icon": {
+          "light": "resources/light/trash.svg",
+          "dark": "resources/dark/trash.svg"
+        }
+      },
+      {
+        "command": "fav.context.moveFavorite",
+        "title": "Move to...",
         "icon": {
           "light": "resources/light/trash.svg",
           "dark": "resources/dark/trash.svg"
@@ -169,6 +177,10 @@
         },
         {
           "command": "fav.context.removeFavorite"
+        },
+        {
+          "command": "fav.context.moveFavorite",
+          "when": "viewItem != group"
         },
         {
           "command": "fav.context.openGroup",

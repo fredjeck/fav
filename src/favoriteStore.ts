@@ -80,33 +80,43 @@ export class FavoriteStore {
      * Adds a Favorite to the store and notifies all the subscribers of the newly added favorite.
      * No duplication check is performed on addition.
      * @emits FavoriteSTore.onFavoriteAdded
-     * @param fav The favorite to add
+     * @param fav The favorites to add
      */
-    public add(fav: Favorite): void {
-        this._favorites.push(fav);
+    public add(...fav: Favorite[]): void {
+        this._favorites.push(...fav);
         this.context.globalState.update(FavoriteStore.FAV_STORE_STATE_KEY, this._favorites);
-        this._onFavoriteAdded.fire(fav);
+        fav.forEach(x => this._onFavoriteAdded.fire(x));
     }
 
     /**
      * Updates a Favorite in the store and notifies all the subscribers of the newly updated favorite.
      * @emits FavoriteSTore.onFavoriteUpdated
-     * @param fav The favorite to add
+     * @param fav The favorites to update
      */
-    public update(fav: Favorite): void {
+    public update(...fav: (Favorite | undefined)[]): void {
         this.context.globalState.update(FavoriteStore.FAV_STORE_STATE_KEY, this._favorites);
-        this._onFavoriteUpdated.fire(fav);
+        fav.forEach(x => { if (x) { this._onFavoriteUpdated.fire(x); } });
     }
 
     /**
      * Deletes a Favorite from the store and notifies all the subscribers of the deleted favorite.
      * @emits FavoriteSTore.onFavoriteDeleted
-     * @param fav The favorite to add
+     * @param fav The favorites to add
      */
-    public delete(fav: Favorite): void {
-        this._favorites.splice(this._favorites.indexOf(fav), 1);
+    public delete(...fav: Favorite[]): void {
+        fav.forEach(x => {
+            let parent = this.getParent(x);
+            if (parent) {
+                parent?.removeChild(x);
+            } else {
+                // No parents, top level fav
+                let index = this._favorites.findIndex(y => y.uuid === x.uuid);
+                this._favorites.splice(index, 1);
+            }
+        });
+
         this.context.globalState.update(FavoriteStore.FAV_STORE_STATE_KEY, this._favorites);
-        this._onFavoriteDeleted.fire(fav);
+        fav.forEach(x => this._onFavoriteDeleted.fire(x));
     }
 
     /**
@@ -135,5 +145,13 @@ export class FavoriteStore {
      * @returns The Favorite to which the resource path belongs or undefined if the resource path was never favorited.
      */
     public existsInStore = (path: string) => this._favorites.find(x => x.resourcePath === path);
+
+    /**
+     * @readonly The provided Favorite's parent or undefined if no parents are declared nor found
+     */
+    public getParent(fav: Favorite): Favorite | undefined {
+        if (!fav.parent) { return undefined; }
+        return this._favorites.find(x => x.uuid === fav.parent);
+    }
 
 }

@@ -27,7 +27,7 @@ export class FavoritesTreeDataProvider  implements TreeDataProvider<Favorite>{
     }
 
     getParent(element:Favorite): ProviderResult<Favorite>{
-        return this._store.groups().find(x => x.uuid === element.parent);
+        return this._store.getParent(element);
     }
 
     getChildren(element?: Favorite): ProviderResult<Favorite[]> {

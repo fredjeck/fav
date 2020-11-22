@@ -13,6 +13,7 @@ export enum Commands {
     PaletteGroupCreate = 'fav.palette.createGroup',
     PaletteGroupOpen = 'fav.palette.openGroup',
     ViewGroupCreate = 'fav.view.createGroup',
+    ContextFavoriteMove = 'fav.context.moveFavorite',
     ContextFavoriteRemove = 'fav.context.removeFavorite',
     ContextFavoriteRename = 'fav.context.renameFavorite',
     ContextResourceOpen = 'fav.context.openResource',
@@ -28,11 +29,13 @@ export class FavoriteManager {
 
     private _treeView: vscode.TreeView<Favorite>;
     private _store: FavoriteStore;
+    private _provider: FavoritesTreeDataProvider;
 
     constructor(context: vscode.ExtensionContext) {
         this._store = FavoriteStore.load(context);
+        this._provider = new FavoritesTreeDataProvider(this._store);
         this._treeView = vscode.window.createTreeView('favorites', {
-            treeDataProvider: new FavoritesTreeDataProvider(this._store),
+            treeDataProvider: this._provider,
             canSelectMany: false
         });
 
@@ -82,7 +85,7 @@ export class FavoriteManager {
         }
 
         let groups = this._store.groups();
-        if (!groups) {
+        if (!groups || groups.length === 0) {
             vscode.window.showWarningMessage('No favorite groups found, please define a group first');
             return;
         }
@@ -96,10 +99,9 @@ export class FavoriteManager {
                     fav.label = v;
                     fav.resourcePath = path || '';
                     fav.kind = FavoriteKind.File;
-                    selection.children.push(fav);
+                    selection.addChild(fav);
                     this._store.update(selection);
 
-                    fav.parent = selection.uuid;
                     this._treeView.reveal(fav);
                 });
             }
@@ -132,7 +134,7 @@ export class FavoriteManager {
      * @param fav A favorite group, if no group is provied the user will be prompted to pick a group.
      */
     openGroup(fav: Favorite): void {
-        let promise = (fav && FavoriteKind.Group === fav.kind && fav.children) ? Promise.resolve(fav) : vscode.window.showQuickPick(this._store.favorites().filter(f => FavoriteKind.Group === f.kind));
+        let promise = (fav && FavoriteKind.Group === fav.kind && fav.children) ? Promise.resolve(fav) : this.promptGroupSelection();
 
         promise.then(selection => {
             if (selection) {
@@ -178,6 +180,34 @@ export class FavoriteManager {
     }
 
     /**
+     * Prompts the user for a group to move the favorite to.
+     * @param favorite The favorite to move to another group
+     */
+    moveFavorite(favorite: Favorite): void {
+        if (!favorite) {
+            return;
+        }
+        let parent = this._store.getParent(favorite);
+
+        this.promptGroupSelection(parent).then(group => {
+            if (group) {
+                if(parent){
+                    parent.removeChild(favorite);
+                }else{
+                    // Top level Favorite
+                    this._store.delete(favorite);
+                }
+                
+                group.addChild(favorite);
+                // Slight different approach here, we do refresh the treeview manually
+                this._store.update();
+                this._provider.refresh();
+                this._treeView.reveal(favorite);
+            }
+        });
+    }
+
+    /**
      * Renames a Favorite'
      * @param favorite The Favorite to rename
      */
@@ -215,8 +245,9 @@ export class FavoriteManager {
         context.subscriptions.push(vscode.commands.registerCommand(Commands.ViewGroupCreate, this.createGroup, this));
         context.subscriptions.push(vscode.commands.registerCommand(Commands.ContextFavoriteRemove, this.removeFavorite, this));
         context.subscriptions.push(vscode.commands.registerCommand(Commands.ContextFavoriteRename, this.renameFavorite, this));
+        context.subscriptions.push(vscode.commands.registerCommand(Commands.ContextFavoriteMove, this.moveFavorite, this));
         context.subscriptions.push(vscode.commands.registerCommand(Commands.ContextGroupOpen, this.openGroup, this));
-        context.subscriptions.push(vscode.commands.registerCommand(Commands.ContextResourceOpen, resource => this.openResource(resource)));
+        context.subscriptions.push(vscode.commands.registerCommand(Commands.ContextResourceOpen, this.openResource, this));
     }
 
     /**
@@ -245,5 +276,12 @@ export class FavoriteManager {
             return true;
         }
         return false;
+    }
+
+    /**
+     * Opens a quickpick and prompts the user to select a Favorite group.
+     */
+    private promptGroupSelection(...exclusions: (Favorite | undefined)[]): Thenable<Favorite | undefined> {
+        return vscode.window.showQuickPick(this._store.favorites().filter(f => FavoriteKind.Group === f.kind && !exclusions.find(x => x?.uuid === f.uuid)));
     }
 }
