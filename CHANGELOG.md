@@ -1,5 +1,14 @@
 # Change Log
 
+## 1.1.0
+
+- Favorites can now be moved between Groups using the "Move to..." context menu
+- All the Quick Picks plus the Favorites bar are now correctly sorted
+- Prevents users from creating duplicated Favorites
+- Undesired commands are now hidden in the Palette
+- When opening a Favorite, the group which the Favorite belongs to is shown in the Quick Pick
+- Revamped the icon
+
 ## 1.0.0
 
 - Initial release
