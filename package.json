@@ -36,6 +36,14 @@
         "title": "Favorites: Add active file to favorites"
       },
       {
+        "command": "fav.palette.edit",
+        "title": "Favorites: Edit favorites.json"
+      },
+      {
+        "command": "fav.palette.reload",
+        "title": "Favorites: Reload favorites"
+      },
+      {
         "command": "fav.palette.favoriteActiveFileToGroup",
         "title": "Favorites: Add active file to favorites group"
       },

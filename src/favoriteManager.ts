@@ -9,6 +9,8 @@ import { FavoritesTreeDataProvider } from './favoriteTreeDataProvider';
 export enum Commands {
     PaletteFavoriteActiveFile = 'fav.palette.favoriteActiveFile',
     PaletteFavoriteActiveFileToGroup = 'fav.palette.favoriteActiveFileToGroup',
+    PaletteEdit = 'fav.palette.edit',
+    PaletteReload = 'fav.palette.reload',
     PaletteFavoriteOpen = 'fav.palette.openFavorite',
     PaletteGroupCreate = 'fav.palette.createGroup',
     PaletteGroupOpen = 'fav.palette.openGroup',
@@ -40,6 +42,13 @@ export class FavoriteManager {
         });
 
         this.registerCommands(context);
+
+        // If the user saves the favorites.json file, we reserve some special treatment
+        vscode.workspace.onDidSaveTextDocument(document => {
+            if (document.uri.fsPath === this._store.storeUri.fsPath) {
+                this.saveFavorites();
+            }
+        });
     }
 
     /**
@@ -105,6 +114,34 @@ export class FavoriteManager {
                     this._treeView.reveal(fav);
                 });
             }
+        });
+    }
+
+    /**
+     * Opens the favorites.json file for edition
+     */
+    editFavorites(): void {
+        vscode.window.showTextDocument(this._store.storeUri).then(editor => vscode.commands.executeCommand('editor.action.formatDocument'));
+    }
+
+    /**
+     * Forces the store to reload the favorites from the favorites.json file
+     */
+    reloadFavorites(): void {
+        this._store.reload().catch(err => {
+            vscode.window.showErrorMessage(err.message, 'Ok');
+        });
+    }
+
+    /**
+     * Called whenever favorites are saved
+     */
+    saveFavorites(): void {
+        this._store.reload().then(() => {
+            // We refresh the opened text editor in case we fixed some JSON (i.e. uuids)
+            this.editFavorites();
+        }).catch(err => {
+            vscode.window.showErrorMessage(err.message, 'Ok');
         });
     }
 
@@ -191,13 +228,13 @@ export class FavoriteManager {
 
         this.promptGroupSelection(parent).then(group => {
             if (group) {
-                if(parent){
+                if (parent) {
                     parent.removeChild(favorite);
-                }else{
+                } else {
                     // Top level Favorite
                     this._store.delete(favorite);
                 }
-                
+
                 group.addChild(favorite);
                 // Slight different approach here, we do refresh the treeview manually
                 this._store.update();
@@ -237,6 +274,8 @@ export class FavoriteManager {
     registerCommands(context: vscode.ExtensionContext): void {
         context.subscriptions.push(vscode.commands.registerCommand(Commands.PaletteFavoriteActiveFile, this.favoriteActiveFile, this));
         context.subscriptions.push(vscode.commands.registerCommand(Commands.MenuFavoriteActiveFile, this.favoriteActiveFile, this));
+        context.subscriptions.push(vscode.commands.registerCommand(Commands.PaletteEdit, this.editFavorites, this));
+        context.subscriptions.push(vscode.commands.registerCommand(Commands.PaletteReload, this.reloadFavorites, this));
         context.subscriptions.push(vscode.commands.registerCommand(Commands.PaletteFavoriteActiveFileToGroup, this.favoriteActiveFileToGroup, this));
         context.subscriptions.push(vscode.commands.registerCommand(Commands.MenuFavoriteActiveFileToGroup, this.favoriteActiveFileToGroup, this));
         context.subscriptions.push(vscode.commands.registerCommand(Commands.PaletteFavoriteOpen, this.openFavorite, this));

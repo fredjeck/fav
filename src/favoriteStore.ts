@@ -1,69 +1,89 @@
 import * as vscode from 'vscode';
 import { Favorite, FavoriteKind } from './favorite';
+import { v4 as uuidv4 } from 'uuid';
 
 export class FavoriteStore {
 
     private static readonly FAV_STORE_STATE_KEY = 'fav.store'; // The store key in the global VSCode state.
 
-    private _onFavoriteAdded: vscode.EventEmitter<Favorite> = new vscode.EventEmitter();
+    private _onFavoriteAdded: vscode.EventEmitter<Favorite | undefined> = new vscode.EventEmitter();
     /**
      * Event emitted whenever a new Favorite is added to the store.
      */
-    readonly onFavoriteAdded: vscode.Event<Favorite> = this._onFavoriteAdded.event;
+    readonly onFavoriteAdded: vscode.Event<Favorite | undefined> = this._onFavoriteAdded.event;
 
-    private _onFavoriteUpdated: vscode.EventEmitter<Favorite> = new vscode.EventEmitter();
+    private _onFavoriteUpdated: vscode.EventEmitter<Favorite | undefined> = new vscode.EventEmitter();
     /**
      * Event emitted whenever a Favorite is updated into the store.
      */
-    readonly onFavoriteUpdated: vscode.Event<Favorite> = this._onFavoriteUpdated.event;
+    readonly onFavoriteUpdated: vscode.Event<Favorite | undefined> = this._onFavoriteUpdated.event;
 
-    private _onFavoriteDeleted: vscode.EventEmitter<Favorite> = new vscode.EventEmitter();
+    private _onFavoriteDeleted: vscode.EventEmitter<Favorite | undefined> = new vscode.EventEmitter();
     /**
      * Event emitted whenever a Favorite is removed from store.
      */
-    readonly onFavoriteDeleted: vscode.Event<Favorite> = this._onFavoriteDeleted.event;
-
+    readonly onFavoriteDeleted: vscode.Event<Favorite | undefined> = this._onFavoriteDeleted.event;
 
     private static _instance: FavoriteStore; // Current store instance
-    private _favorites: Favorite[]; // Underlying favorite storage
+    private _favorites: Favorite[] = []; // Underlying favorite storage
+
+    private _storeUri: vscode.Uri;
+    get storeUri(): vscode.Uri {
+        return this._storeUri;
+    }
 
     /**
      * Instantiates the store, cannot be called directly.
      * A store instance should be obtained via the load method for an initial call() and via the current() method for any subsequent calls.
      * @param context The extension context we are running in
-     * @param clear If true, clears the store
      */
-    private constructor(private context: vscode.ExtensionContext, clear = false) {
-        if (clear) {
-            this._favorites = [];
-            this.context.globalState.update(FavoriteStore.FAV_STORE_STATE_KEY, this._favorites);
-            return;
-        }
-
-        this._favorites = context.globalState.get<Favorite[]>(FavoriteStore.FAV_STORE_STATE_KEY)?.map(f => {
-            let fav = Object.assign(new Favorite(), f);
-            if (f.children && f.children.length) {
-                fav.children = f.children.map(child => {
-                    let c = Object.assign(new Favorite(), child);
-                    c.parent = f.uuid;
-                    return c;
-                });
-            }
-            return fav;
-        }) || [];
+    private constructor(private context: vscode.ExtensionContext) {
+        var globalStorageUri = context.globalStorageUri;
+        vscode.workspace.fs.createDirectory(globalStorageUri);
+        this._storeUri = vscode.Uri.joinPath(globalStorageUri, 'favorites.json');
+        this.reload();
     };
 
     /**
      * Initializes the store, if already initialized, returns the already configured instance instead.
      * @param context The extension context we are running in
-     * @param clear If true, clears the store
      * @returns The store instance
      */
-    public static load(context: vscode.ExtensionContext, clear = false): FavoriteStore {
+    public static load(context: vscode.ExtensionContext): FavoriteStore {
         if (!FavoriteStore._instance) {
             FavoriteStore._instance = new FavoriteStore(context);
         }
         return FavoriteStore._instance;
+    }
+
+    /**
+     * Reloads the store from the underlying storage.
+     */
+    public async reload() {
+        let saveRequired = false;
+        const buffer = await vscode.workspace.fs.readFile(this._storeUri);
+
+        this._favorites = (JSON.parse(buffer.toString()) as Favorite[])?.map(f => {
+            let fav = Object.assign(new Favorite(), f);
+            if(!f.uuid){
+                // This allows editing the store configuration file manually, we will generate the UUIDs automatically afterwards
+                fav.uuid = uuidv4();
+                saveRequired = true; // We fixed the structure while loading, we need to re-persist the favorites
+            }
+            if (f.children && f.children.length) {
+                fav.children = f.children.map(child => {
+                    let c = Object.assign(new Favorite(), child);
+                    c.parent = fav.uuid;
+                    return c;
+                });
+            }
+            return fav;
+        }) || [];
+        if(saveRequired){
+            await this.persistToStorage();
+        }
+
+        this._onFavoriteAdded.fire(undefined);
     }
 
     /**
@@ -82,9 +102,9 @@ export class FavoriteStore {
      * @emits FavoriteSTore.onFavoriteAdded
      * @param fav The favorites to add
      */
-    public add(...fav: Favorite[]): void {
+    public async add(...fav: Favorite[]): Promise<void> {
         this._favorites.push(...fav);
-        this.context.globalState.update(FavoriteStore.FAV_STORE_STATE_KEY, this._favorites);
+        await this.persistToStorage();
         fav.forEach(x => this._onFavoriteAdded.fire(x));
     }
 
@@ -93,8 +113,8 @@ export class FavoriteStore {
      * @emits FavoriteSTore.onFavoriteUpdated
      * @param fav The favorites to update
      */
-    public update(...fav: (Favorite | undefined)[]): void {
-        this.context.globalState.update(FavoriteStore.FAV_STORE_STATE_KEY, this._favorites);
+    public async update(...fav: (Favorite | undefined)[]): Promise<void> {
+        await this.persistToStorage();
         fav.forEach(x => { if (x) { this._onFavoriteUpdated.fire(x); } });
     }
 
@@ -103,7 +123,7 @@ export class FavoriteStore {
      * @emits FavoriteSTore.onFavoriteDeleted
      * @param fav The favorites to add
      */
-    public delete(...fav: Favorite[]): void {
+    public async delete(...fav: Favorite[]): Promise<void> {
         fav.forEach(x => {
             let parent = this.getParent(x);
             if (parent) {
@@ -115,7 +135,7 @@ export class FavoriteStore {
             }
         });
 
-        this.context.globalState.update(FavoriteStore.FAV_STORE_STATE_KEY, this._favorites);
+        await this.persistToStorage();
         fav.forEach(x => this._onFavoriteDeleted.fire(x));
     }
 
@@ -154,4 +174,10 @@ export class FavoriteStore {
         return this._favorites.find(x => x.uuid === fav.parent);
     }
 
+    /**
+     * Saves the favorites to the underlying storage
+     */
+    private persistToStorage(): Thenable<void> {
+        return vscode.workspace.fs.writeFile(this.storeUri, Buffer.from(JSON.stringify(this._favorites)));
+    }
 }
