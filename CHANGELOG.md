@@ -1,5 +1,8 @@
 # Change Log
 
+## 1.2.0
+- Changed the storage strategy to a local json file
+- Added support for editing directly the favorites configuration file (JSON)
 ## 1.1.0
 
 - Favorites can now be moved between Groups using the "Move to..." context menu
