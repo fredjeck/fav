@@ -1,7 +1,8 @@
 import * as vscode from 'vscode';
 import { Favorite, FavoriteKind } from './favorite';
-import { FavoriteStore } from './favoriteStore';
+import { FavoriteStore } from './store';
 import { FavoritesTreeDataProvider } from './favoriteTreeDataProvider';
+import { Utils } from './utils';
 
 /**
  * Registry of all enabled commands.
@@ -34,7 +35,12 @@ export class FavoriteManager {
     private _provider: FavoritesTreeDataProvider;
 
     constructor(context: vscode.ExtensionContext) {
-        this._store = FavoriteStore.load(context);
+        this._store = FavoriteStore.load(context, () => {
+            this._provider.refresh();
+            if (vscode.window.visibleTextEditors.find(editor => editor.document.uri.fsPath === this._store.storeUri.fsPath)) {
+                this.editFavorites();
+            }
+        });
         this._provider = new FavoritesTreeDataProvider(this._store);
         this._treeView = vscode.window.createTreeView('favorites', {
             treeDataProvider: this._provider,
@@ -46,7 +52,9 @@ export class FavoriteManager {
         // If the user saves the favorites.json file, we reserve some special treatment
         vscode.workspace.onDidSaveTextDocument(document => {
             if (document.uri.fsPath === this._store.storeUri.fsPath) {
-                this.saveFavorites();
+                this._store.reload().catch(err => {
+                    vscode.window.showErrorMessage(err.message, 'Ok');
+                });
             }
         });
     }
@@ -61,11 +69,7 @@ export class FavoriteManager {
             return;
         }
 
-        if (this.isResourceDuplicated(path)) {
-            return;
-        }
-
-        vscode.window.showInputBox({ prompt: 'Label', value: path }).then((v) => {
+        vscode.window.showInputBox({ prompt: 'Label', value: Utils.fileName(path as string) }).then((v) => {
             if (!v) { return; }
 
             let fav = new Favorite();
@@ -74,6 +78,7 @@ export class FavoriteManager {
             fav.kind = FavoriteKind.File;
 
             this._store.add(fav);
+            this._provider.refresh();
             this._treeView.reveal(fav);
         });
     }
@@ -89,10 +94,6 @@ export class FavoriteManager {
             return;
         }
 
-        if (this.isResourceDuplicated(path)) {
-            return;
-        }
-
         let groups = this._store.groups();
         if (!groups || groups.length === 0) {
             vscode.window.showWarningMessage('No favorite groups found, please define a group first');
@@ -101,7 +102,7 @@ export class FavoriteManager {
 
         vscode.window.showQuickPick(groups).then(selection => {
             if (selection) {
-                vscode.window.showInputBox({ prompt: 'Label', value: path }).then((v) => {
+                vscode.window.showInputBox({ prompt: 'Label', value: Utils.fileName(path as string) }).then((v) => {
                     if (!v) { return; }
 
                     let fav = new Favorite();
@@ -110,7 +111,7 @@ export class FavoriteManager {
                     fav.kind = FavoriteKind.File;
                     selection.addChild(fav);
                     this._store.update(selection);
-
+                    this._provider.refresh(selection);
                     this._treeView.reveal(fav);
                 });
             }
@@ -120,27 +121,15 @@ export class FavoriteManager {
     /**
      * Opens the favorites.json file for edition
      */
-    editFavorites(): void {
-        vscode.window.showTextDocument(this._store.storeUri).then(editor => vscode.commands.executeCommand('editor.action.formatDocument'));
+    async editFavorites(): Promise<void> {
+        let editor = await vscode.window.showTextDocument(this._store.storeUri, { preview: false, preserveFocus: false, selection: new vscode.Selection(new vscode.Position(0, 0), new vscode.Position(0, 0)) });
     }
 
     /**
      * Forces the store to reload the favorites from the favorites.json file
      */
     reloadFavorites(): void {
-        this._store.reload().catch(err => {
-            vscode.window.showErrorMessage(err.message, 'Ok');
-        });
-    }
-
-    /**
-     * Called whenever favorites are saved
-     */
-    saveFavorites(): void {
-        this._store.reload().then(() => {
-            // We refresh the opened text editor in case we fixed some JSON (i.e. uuids)
-            this.editFavorites();
-        }).catch(err => {
+        this._store.reload().then(() => this._provider.refresh(undefined)).catch(err => {
             vscode.window.showErrorMessage(err.message, 'Ok');
         });
     }
@@ -192,6 +181,7 @@ export class FavoriteManager {
             fav.kind = FavoriteKind.Group;
 
             this._store.add(fav);
+            this._provider.refresh(undefined);
             this._treeView.reveal(fav);
         });
     }
@@ -211,6 +201,7 @@ export class FavoriteManager {
             vscode.window.showWarningMessage(message, 'Yes', 'No').then(choice => {
                 if ('Yes' === choice) {
                     this._store.delete(favorite);
+                    this._provider.refresh(undefined);
                 }
             });
         }
@@ -254,6 +245,8 @@ export class FavoriteManager {
                 if (value) {
                     favorite.label = value;
                     this._store.update(favorite);
+                    this._provider.refresh(favorite);
+                    this._treeView.reveal(favorite);
                 }
             });
         }
@@ -301,20 +294,6 @@ export class FavoriteManager {
         } else {
             return undefined;
         }
-    }
-
-    /**
-     * Prevents a resource from being Favorited twice and displays an error message to the user if the given path is already found in the store.
-     * @param resourcePath The resource path of the resource being favorited
-     */
-    private isResourceDuplicated(resourcePath: string): boolean {
-        var fav = this._store.existsInStore(resourcePath);
-        if (fav) {
-            vscode.window.showErrorMessage(`This resource already exists in your favorites (under the label ${fav.label})`);
-            this._treeView.reveal(fav);
-            return true;
-        }
-        return false;
     }
 
     /**

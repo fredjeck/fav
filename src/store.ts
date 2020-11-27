@@ -2,30 +2,17 @@ import * as vscode from 'vscode';
 import { Favorite, FavoriteKind } from './favorite';
 import { v4 as uuidv4 } from 'uuid';
 
+export type OnStoreLoadedHandler = () => void;
+
 export class FavoriteStore {
 
     private static readonly FAV_STORE_STATE_KEY = 'fav.store'; // The store key in the global VSCode state.
 
-    private _onFavoriteAdded: vscode.EventEmitter<Favorite | undefined> = new vscode.EventEmitter();
-    /**
-     * Event emitted whenever a new Favorite is added to the store.
-     */
-    readonly onFavoriteAdded: vscode.Event<Favorite | undefined> = this._onFavoriteAdded.event;
-
-    private _onFavoriteUpdated: vscode.EventEmitter<Favorite | undefined> = new vscode.EventEmitter();
-    /**
-     * Event emitted whenever a Favorite is updated into the store.
-     */
-    readonly onFavoriteUpdated: vscode.Event<Favorite | undefined> = this._onFavoriteUpdated.event;
-
-    private _onFavoriteDeleted: vscode.EventEmitter<Favorite | undefined> = new vscode.EventEmitter();
-    /**
-     * Event emitted whenever a Favorite is removed from store.
-     */
-    readonly onFavoriteDeleted: vscode.Event<Favorite | undefined> = this._onFavoriteDeleted.event;
+    private _onStoreLoaded: vscode.EventEmitter<undefined> = new vscode.EventEmitter();
+    readonly onStoreLoaded: vscode.Event<undefined> = this._onStoreLoaded.event;
 
     private static _instance: FavoriteStore; // Current store instance
-    private _favorites: Favorite[] = []; // Underlying favorite storage
+    private _favorites: Favorite[] = []; // The Favorites
 
     private _storeUri: vscode.Uri;
     get storeUri(): vscode.Uri {
@@ -37,10 +24,11 @@ export class FavoriteStore {
      * A store instance should be obtained via the load method for an initial call() and via the current() method for any subsequent calls.
      * @param context The extension context we are running in
      */
-    private constructor(private context: vscode.ExtensionContext) {
+    private constructor(private context: vscode.ExtensionContext, loaded:OnStoreLoadedHandler) {
         var globalStorageUri = context.globalStorageUri;
         vscode.workspace.fs.createDirectory(globalStorageUri);
         this._storeUri = vscode.Uri.joinPath(globalStorageUri, 'favorites.json');
+        this.onStoreLoaded(loaded);
         this.reload();
     };
 
@@ -49,26 +37,28 @@ export class FavoriteStore {
      * @param context The extension context we are running in
      * @returns The store instance
      */
-    public static load(context: vscode.ExtensionContext): FavoriteStore {
+    public static load(context: vscode.ExtensionContext, loaded:OnStoreLoadedHandler): FavoriteStore {
         if (!FavoriteStore._instance) {
-            FavoriteStore._instance = new FavoriteStore(context);
+            FavoriteStore._instance = new FavoriteStore(context, loaded);
         }
         return FavoriteStore._instance;
     }
 
     /**
      * Reloads the store from the underlying storage.
+     * Missing UUIDS and parent IDs will be automatically filled upon loading.
      */
     public async reload() {
+        // When loading the favorites from the json file, it can happen that the json is malformed and needs to be fixed.
+        // If so immediately after loading the favorites we re-save the corrected data.
         let saveRequired = false;
         const buffer = await vscode.workspace.fs.readFile(this._storeUri);
 
         this._favorites = (JSON.parse(buffer.toString()) as Favorite[])?.map(f => {
             let fav = Object.assign(new Favorite(), f);
             if(!f.uuid){
-                // This allows editing the store configuration file manually, we will generate the UUIDs automatically afterwards
                 fav.uuid = uuidv4();
-                saveRequired = true; // We fixed the structure while loading, we need to re-persist the favorites
+                saveRequired = true;
             }
             if (f.children && f.children.length) {
                 fav.children = f.children.map(child => {
@@ -79,11 +69,13 @@ export class FavoriteStore {
             }
             return fav;
         }) || [];
+
+        // We fixed the structure, a save is neede.
         if(saveRequired){
-            await this.persistToStorage();
+            await this.persist();
         }
 
-        this._onFavoriteAdded.fire(undefined);
+        this._onStoreLoaded.fire(undefined);
     }
 
     /**
@@ -91,7 +83,7 @@ export class FavoriteStore {
      */
     public static current(): FavoriteStore {
         if (!FavoriteStore._instance) {
-            throw new Error('Favorites store has not been initialized prior its first access');
+            throw new Error('Favorites store has not been initialized');
         }
         return FavoriteStore._instance;
     }
@@ -99,28 +91,23 @@ export class FavoriteStore {
     /**
      * Adds a Favorite to the store and notifies all the subscribers of the newly added favorite.
      * No duplication check is performed on addition.
-     * @emits FavoriteSTore.onFavoriteAdded
      * @param fav The favorites to add
      */
     public async add(...fav: Favorite[]): Promise<void> {
         this._favorites.push(...fav);
-        await this.persistToStorage();
-        fav.forEach(x => this._onFavoriteAdded.fire(x));
+        await this.persist();
     }
 
     /**
      * Updates a Favorite in the store and notifies all the subscribers of the newly updated favorite.
-     * @emits FavoriteSTore.onFavoriteUpdated
      * @param fav The favorites to update
      */
     public async update(...fav: (Favorite | undefined)[]): Promise<void> {
-        await this.persistToStorage();
-        fav.forEach(x => { if (x) { this._onFavoriteUpdated.fire(x); } });
+        await this.persist();
     }
 
     /**
      * Deletes a Favorite from the store and notifies all the subscribers of the deleted favorite.
-     * @emits FavoriteSTore.onFavoriteDeleted
      * @param fav The favorites to add
      */
     public async delete(...fav: Favorite[]): Promise<void> {
@@ -129,20 +116,19 @@ export class FavoriteStore {
             if (parent) {
                 parent?.removeChild(x);
             } else {
-                // No parents, top level fav
+                // No parents, top level favorite
                 let index = this._favorites.findIndex(y => y.uuid === x.uuid);
                 this._favorites.splice(index, 1);
             }
         });
 
-        await this.persistToStorage();
-        fav.forEach(x => this._onFavoriteDeleted.fire(x));
+        await this.persist();
     }
 
     /**
-     * Returns a copy of all the favorites in the store
+     * Returns a shallow copy of all the favorites in the store
      * The returned array is a copy of the underlying storage which contains references to the original Favorites.
-     * Any change to a Favorite in this collection followed by an addition/update operation will commit the changes in the underlying storage.
+     * Any change to a Favorite in this collection followed by a crud operation will commit the changes in the underlying storage.
      * @returns all the Favorites in the store. 
      */
     public favorites(): Favorite[] {
@@ -150,7 +136,7 @@ export class FavoriteStore {
     }
 
     /**
-     * Returns a copy of all the groups in the store
+     * Returns shallow a copy of all the groups in the store
      * The returned array is a copy of the underlying storage which contains references to the original Favorites.
      * Any change to a Favorite in this collection followed by an addition/update operation will commit the changes in the underlying storage.
      * @returns all the Favorites in the store. 
@@ -158,13 +144,6 @@ export class FavoriteStore {
     public groups(): Favorite[] {
         return this._favorites.filter(f => FavoriteKind.Group === f.kind).sort(Favorite.comparatorFn);
     }
-
-    /**
-     * Checks if a resource path already exists in the store
-     * @param path A resource path
-     * @returns The Favorite to which the resource path belongs or undefined if the resource path was never favorited.
-     */
-    public existsInStore = (path: string) => this._favorites.find(x => x.resourcePath === path);
 
     /**
      * @readonly The provided Favorite's parent or undefined if no parents are declared nor found
@@ -177,7 +156,7 @@ export class FavoriteStore {
     /**
      * Saves the favorites to the underlying storage
      */
-    private persistToStorage(): Thenable<void> {
-        return vscode.workspace.fs.writeFile(this.storeUri, Buffer.from(JSON.stringify(this._favorites)));
+    private persist(): Thenable<void> {
+        return vscode.workspace.fs.writeFile(this.storeUri, Buffer.from(JSON.stringify(this._favorites, null, 4)));
     }
 }

@@ -1,6 +1,6 @@
 import { Event, EventEmitter, ProviderResult, ThemeIcon, TreeDataProvider, TreeItem, TreeItemCollapsibleState, Uri } from 'vscode';
 import { Favorite } from './favorite';
-import { FavoriteStore } from './favoriteStore';
+import { FavoriteStore } from './store';
 
 /**
  * A TreeDataProvider for Favorites.
@@ -13,9 +13,6 @@ export class FavoritesTreeDataProvider  implements TreeDataProvider<Favorite>{
     private _store:FavoriteStore;
     constructor(store:FavoriteStore){
         this._store = store;
-        this._store.onFavoriteAdded((f) => this.refresh(undefined));
-        this._store.onFavoriteDeleted((f) => this.refresh(undefined));
-        this._store.onFavoriteUpdated((f) => this.refresh(f));
     }
   
     refresh(f:Favorite | undefined | null | void): void {
