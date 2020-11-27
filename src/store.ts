@@ -6,17 +6,25 @@ export type OnStoreLoadedHandler = () => void;
 
 export class FavoriteStore {
 
-    private static readonly FAV_STORE_STATE_KEY = 'fav.store'; // The store key in the global VSCode state.
-
     private _onStoreLoaded: vscode.EventEmitter<undefined> = new vscode.EventEmitter();
+    /**
+     * Event emitted whenever the store is loaded/reloaded and is ready to be used.
+     */
     readonly onStoreLoaded: vscode.Event<undefined> = this._onStoreLoaded.event;
 
     private static _instance: FavoriteStore; // Current store instance
-    private _favorites: Favorite[] = []; // The Favorites
+    private _favorites: Favorite[] = []; // In memory collection of Favorites
 
     private _storeUri: vscode.Uri;
     get storeUri(): vscode.Uri {
         return this._storeUri;
+    }
+
+    static get instance() {
+        if (!FavoriteStore._instance) {
+            throw new Error('Favorites store has not been initialized');
+        }
+        return FavoriteStore._instance;
     }
 
     /**
@@ -24,12 +32,12 @@ export class FavoriteStore {
      * A store instance should be obtained via the load method for an initial call() and via the current() method for any subsequent calls.
      * @param context The extension context we are running in
      */
-    private constructor(private context: vscode.ExtensionContext, loaded:OnStoreLoadedHandler) {
+    private constructor(private context: vscode.ExtensionContext, loaded: OnStoreLoadedHandler) {
         var globalStorageUri = context.globalStorageUri;
         vscode.workspace.fs.createDirectory(globalStorageUri);
         this._storeUri = vscode.Uri.joinPath(globalStorageUri, 'favorites.json');
         this.onStoreLoaded(loaded);
-        this.reload();
+        this.refresh();
     };
 
     /**
@@ -37,7 +45,7 @@ export class FavoriteStore {
      * @param context The extension context we are running in
      * @returns The store instance
      */
-    public static load(context: vscode.ExtensionContext, loaded:OnStoreLoadedHandler): FavoriteStore {
+    static fromContext(context: vscode.ExtensionContext, loaded: OnStoreLoadedHandler): FavoriteStore {
         if (!FavoriteStore._instance) {
             FavoriteStore._instance = new FavoriteStore(context, loaded);
         }
@@ -47,8 +55,9 @@ export class FavoriteStore {
     /**
      * Reloads the store from the underlying storage.
      * Missing UUIDS and parent IDs will be automatically filled upon loading.
+     * @emits onStoreLoaded
      */
-    public async reload() {
+    async refresh():Promise<void> {
         // When loading the favorites from the json file, it can happen that the json is malformed and needs to be fixed.
         // If so immediately after loading the favorites we re-save the corrected data.
         let saveRequired = false;
@@ -56,7 +65,7 @@ export class FavoriteStore {
 
         this._favorites = (JSON.parse(buffer.toString()) as Favorite[])?.map(f => {
             let fav = Object.assign(new Favorite(), f);
-            if(!f.uuid){
+            if (!f.uuid) {
                 fav.uuid = uuidv4();
                 saveRequired = true;
             }
@@ -71,21 +80,11 @@ export class FavoriteStore {
         }) || [];
 
         // We fixed the structure, a save is neede.
-        if(saveRequired){
+        if (saveRequired) {
             await this.persist();
         }
 
         this._onStoreLoaded.fire(undefined);
-    }
-
-    /**
-     * @returns The current store instance
-     */
-    public static current(): FavoriteStore {
-        if (!FavoriteStore._instance) {
-            throw new Error('Favorites store has not been initialized');
-        }
-        return FavoriteStore._instance;
     }
 
     /**
@@ -99,7 +98,7 @@ export class FavoriteStore {
     }
 
     /**
-     * Updates a Favorite in the store and notifies all the subscribers of the newly updated favorite.
+     * Updates an already existing Favorite in the store.
      * @param fav The favorites to update
      */
     public async update(...fav: (Favorite | undefined)[]): Promise<void> {
@@ -107,7 +106,7 @@ export class FavoriteStore {
     }
 
     /**
-     * Deletes a Favorite from the store and notifies all the subscribers of the deleted favorite.
+     * Removes a favorite from the store.
      * @param fav The favorites to add
      */
     public async delete(...fav: Favorite[]): Promise<void> {
@@ -126,7 +125,7 @@ export class FavoriteStore {
     }
 
     /**
-     * Returns a shallow copy of all the favorites in the store
+     * Returns a shallow copy of all the favorites in the store.
      * The returned array is a copy of the underlying storage which contains references to the original Favorites.
      * Any change to a Favorite in this collection followed by a crud operation will commit the changes in the underlying storage.
      * @returns all the Favorites in the store. 
@@ -146,7 +145,7 @@ export class FavoriteStore {
     }
 
     /**
-     * @readonly The provided Favorite's parent or undefined if no parents are declared nor found
+     * @readonly The provided Favorite's parent or undefined if no parents are declared nor found.
      */
     public getParent(fav: Favorite): Favorite | undefined {
         if (!fav.parent) { return undefined; }
