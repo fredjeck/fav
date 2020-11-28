@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { Favorite, FavoriteKind } from './favorite';
+import { Favorite, FavoriteKind } from './model';
 import { v4 as uuidv4 } from 'uuid';
 
 export type OnStoreLoadedHandler = () => void;

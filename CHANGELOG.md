@@ -1,4 +1,8 @@
 # Change Log
+## 1.2.1
+- Bug squashing
+- Changed tree update mechanism
+- Moved away from promises and adopted async code
 
 ## 1.2.0
 - Changed the storage strategy to a local json file

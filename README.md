@@ -26,6 +26,10 @@ You can also open all the favorites in a single group using the *'Open group'* b
 
 ![Create Group](https://raw.githubusercontent.com/fredjeck/fav/main/images/open_favorites.gif)
 
+### Edit your favorites manually
+Want to share your favorites with your team or quickly add new files, that's easy : just edit your configuration file and save it. Your favorites will be automatically reloaded.
+
+![Create Group](https://raw.githubusercontent.com/fredjeck/fav/main/images/edit_favorites.gif)
 
 ## Requirements
 

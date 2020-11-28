@@ -1,5 +1,5 @@
-import { Event, EventEmitter, ProviderResult, ThemeIcon, TreeDataProvider, TreeItem, TreeItemCollapsibleState, Uri } from 'vscode';
-import { Favorite } from './favorite';
+import { Event, EventEmitter, ProviderResult, TreeDataProvider, TreeItem } from 'vscode';
+import { Favorite } from './model';
 import { FavoriteStore } from './store';
 
 /**

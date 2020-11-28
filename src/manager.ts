@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
-import { Favorite, FavoriteKind } from './favorite';
+import { Favorite, FavoriteKind } from './model';
 import { FavoriteStore } from './store';
-import { FavoritesTreeDataProvider } from './favoriteTreeDataProvider';
+import { FavoritesTreeDataProvider } from './tree';
 import { Utils } from './utils';
 
 /**
@@ -116,6 +116,7 @@ export class FavoriteManager {
      */
     editFavorites(): void {
         vscode.window.showTextDocument(this._store.storeUri, { preview: false, preserveFocus: false });
+        vscode.window.showWarningMessage('Please be careful when manually editing your favorites', 'Understood');
     }
 
     /**

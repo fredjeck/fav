@@ -2,7 +2,7 @@
   "name": "fav",
   "displayName": "Fav",
   "description": "Bookmark your favorite files",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "author": "FredJeck",
   "publisher": "FredJeck",
   "licence":"MIT",
@@ -69,27 +69,15 @@
       },
       {
         "command": "fav.context.renameFavorite",
-        "title": "Rename",
-        "icon": {
-          "light": "resources/light/edit.svg",
-          "dark": "resources/dark/edit.svg"
-        }
+        "title": "Rename"
       },
       {
         "command": "fav.context.removeFavorite",
-        "title": "Remove",
-        "icon": {
-          "light": "resources/light/trash.svg",
-          "dark": "resources/dark/trash.svg"
-        }
+        "title": "Remove"
       },
       {
         "command": "fav.context.moveFavorite",
-        "title": "Move to...",
-        "icon": {
-          "light": "resources/light/trash.svg",
-          "dark": "resources/dark/trash.svg"
-        }
+        "title": "Move to..."
       },
       {
         "command": "fav.menu.favoriteActiveFile",
