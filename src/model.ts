@@ -1,20 +1,114 @@
 import { ThemeIcon, TreeItem, TreeItemCollapsibleState, Uri } from 'vscode';
 import { v4 as uuidv4 } from 'uuid';
 
-/**
- * Favorite object.
- */
-export class Favorite {
-    kind: FavoriteKind; // Type of Favorite: Group, Favorite potentially more
-    resourcePath: string; // Path to the resource
+export interface Bookmarkable {
     label: string; // User given label
     uuid: string; // Unique ID for the for this resource
-    children: Favorite[] = []; // When a group, Favorites linked to the group
-    parent?: string; // Uuid of the parent Favorite
-    description?: string; // Used only for QuickPick display contains the parent group if any, updated at each display
+    parent?: string; // Uuid of its parent
 
     /**
-     * @returns An additional description for the Favorite to be displayed in quick pick items (only if the Favorite has a user defined label)
+     * Converts the present object to a TreeItem.
+     * @returns A TreeItem object
+     */
+    toTreeItem(): TreeItem;
+
+    /**
+     * Compares the present object to the provided one.
+     * @param another A Bookmarkable object to compare to
+     * @returns -1, 0 or 1 if respectively this object is smaller, equal or greather than the one it is being compared to.
+     * @see Array.sort
+     */
+    compareTo(another: Bookmarkable): number;
+}
+
+export abstract class Bookmark implements Bookmarkable {
+    label: string; // User given label
+    uuid: string; // Unique ID for the for this resource
+    parent?: string; // Uuid of the parent Favorite
+
+    constructor() {
+        this.uuid = uuidv4();
+        this.label = '';
+    }
+
+    /**
+     * Converts the present object to a TreeItem.
+     * @returns A TreeItem object
+     */
+    abstract toTreeItem(): TreeItem;
+
+    /**
+     * Compares the present object to the provided one.
+     * Comparison is done using the <pre>bookmarkableComparator</pre> function
+     * @param another A Bookmarkable object to compare to
+     * @returns -1, 0 or 1 if respectively this object is smaller, equal or greather than the one it is being compared to.
+     * @see Array.sort
+     * @see bookmarkableComparator
+     */
+    compareTo(other: Bookmarkable): number { return bookmarkableComparator(this, other); }
+}
+
+/**
+ * A Bookmarkable object which can contain sub items.
+ */
+export class Group extends Bookmark {
+    children: Bookmarkable[] = []; // Child items
+
+
+    /**
+     * @returns true if this group has children
+     */
+    get hasChildren(): boolean {
+        return this.children && this.children.length > 0;
+    }
+
+    constructor() {
+        super();
+    }
+
+    /**
+     * Converts the present object to a TreeItem.
+     * @returns A TreeItem object
+     */
+    toTreeItem(): TreeItem {
+        let item: TreeItem = new TreeItem('Undefined', TreeItemCollapsibleState.None);
+        item = new TreeItem(this.label, TreeItemCollapsibleState.Collapsed);
+        item.label = this.label;
+        item.iconPath = ThemeIcon.Folder;
+        item.contextValue = 'group';
+        return item;
+    }
+
+    /**
+     * Adds a new child.
+     * @param item The Bookmarkable to add
+     */
+    addChild(item: Bookmarkable) {
+        this.children.push(item);
+        item.parent = this.uuid;
+    }
+
+    /**
+     * Removes a child from this group's immediate childrens.
+     * @param item The Bookmarkable to remove
+     */
+    removeChild(item: Bookmarkable) {
+        var index = this.children.findIndex(x => x.uuid === item.uuid);
+        if (index < 0) { return; }
+        this.children[index].parent = undefined;
+        this.children.splice(index, 1);
+    }
+}
+
+/**
+ * A Favorited file.
+ */
+export class Favorite extends Bookmark {
+    resourcePath: string; // Path to the resource
+    description?: string; // Used only for QuickPick displays. Contains the parent group if any, updated before each display
+
+    /**
+     * @returns An additional description for the Favorite to be displayed in quick pick items (only if using user defined label)
      */
     get detail(): string | undefined {
         return this.label !== this.resourcePath ? this.resourcePath : undefined;
@@ -27,108 +121,61 @@ export class Favorite {
         return Uri.file(this.resourcePath);
     }
 
-    /**
-     * Creates a new Favorite object of kind Undefined and generates a new UUID for it.
-     */
     constructor() {
-        this.uuid = uuidv4();
-        this.kind = FavoriteKind.Undefined;
+        super();
         this.resourcePath = '';
-        this.label = '';
     }
 
     /**
-     * Converts the present Favorite to a TreeItem.
+     * Converts the present object to a TreeItem.
      * @returns A TreeItem object
      */
     toTreeItem(): TreeItem {
         let item: TreeItem = new TreeItem('Undefined', TreeItemCollapsibleState.None);
-        switch (this.kind) {
-            case FavoriteKind.File:
-                item = new TreeItem(this.label, TreeItemCollapsibleState.None);
-                item.label = this.label;
-                item.resourceUri = this.resourceUri;
-                item.iconPath = ThemeIcon.File;
-                item.tooltip = this.resourcePath;
-                item.command = {
-                    command: 'fav.context.openResource',
-                    arguments: [item.resourceUri],
-                    title: 'Open Favorite'
-                };
-                break;
-
-            case FavoriteKind.Group:
-                item = new TreeItem(this.label, TreeItemCollapsibleState.Collapsed);
-                item.label = this.label;
-                item.iconPath = ThemeIcon.Folder;
-                item.contextValue = 'group';
-                break;
-            default:
-                break;
-        }
+        item = new TreeItem(this.label, TreeItemCollapsibleState.None);
+        item.label = this.label;
+        item.resourceUri = this.resourceUri;
+        item.iconPath = ThemeIcon.File;
+        item.tooltip = this.resourcePath;
+        item.command = {
+            command: 'fav.context.openResource',
+            arguments: [item.resourceUri],
+            title: 'Open Favorite'
+        };
         return item;
-    }
-
-    /**
-     * Compare this Favorite to another one.
-     * Favorites are always compared using their labels. 
-     * If a group is compared with a standard Favorite, the result will be such that the group will appear first in the sorted result
-     * @param other The Favorite to compare to
-     */
-    compareTo = (other: Favorite) => Favorite.comparatorFn(this, other);
-
-    /**
-     * Adds a Favorite to this Favorite's children.
-     * @param fav The Favorite to add
-     */
-    addChild(fav: Favorite) {
-        this.children.push(fav);
-        fav.parent = this.uuid;
-    }
-
-    /**
-     * Removes a Favorite from this Favorite's children (if exists).
-     * @param fav The Favorite to remove
-     */
-    removeChild(fav: Favorite) {
-        var index = this.children.findIndex(x => x.uuid === fav.uuid);
-        if (index < 0) { return; }
-        this.children[index].parent = undefined;
-        this.children.splice(index, 1);
-    }
-
-    /**
-     * A comparator helper, useful for instance to be called in Array.sort() calls.
-     * Compare this Favorite to another one.
-     * Favorites are always compared using their labels. 
-     * If a group is compared with a standard Favorite, the result will be such that the group will appear first in the sorted result
-     * @param a A Favorite
-     * @param b Another Favorite
-     */
-    static comparatorFn(a: Favorite, b: Favorite) {
-        if (a.kind !== b.kind) {
-            return FavoriteKind.Group === a.kind ? -1 : 1;
-        }
-        return a.label.localeCompare(b.label);
-    }
-
-    /**
-     * A comparator helper, useful for instance to be called in Array.sort() calls.
-     * Compare this Favorite to another one and ignores the kind differences
-     * @param a A Favorite
-     * @param b Another Favorite
-     */
-    static ignoreKindComparatorFn(a: Favorite, b: Favorite) {
-        return a.label.localeCompare(b.label);
     }
 }
 
 /**
- * Defines the type of Favorite.
- * If more types to come this will should be replaced by proper object tree.
+ * Checks wether an IFavorite is a group.
+ * @param a An IFavorite
  */
-export enum FavoriteKind {
-    Undefined = 0,
-    Group, // The favorite is a group which can have children
-    File // The favorite points to as single file
+export function isGroup(a: Bookmarkable) {
+    return (a as Group).children !== undefined;
+}
+
+/**
+* A comparator helper, useful for instance to be called in Array.sort() calls.
+* Compare this Favorite to another one.
+* Favorites are always compared using their labels. 
+* If a group is compared with a standard Favorite, the result will be such that the group will appear first in the sorted result
+* @param a A Favorite
+* @param b Another Favorite
+*/
+export function bookmarkableComparator(a: Bookmarkable, b: Bookmarkable): number {
+    if (isGroup(a) !== isGroup(b)) {
+        return isGroup(a) ? -1 : 1;
+    }
+    return a.label.localeCompare(b.label);
+}
+
+
+/**
+   * A comparator helper, useful for instance to be called in Array.sort() calls.
+   * Compare this Favorite to another one and ignores the kind differences
+   * @param a A Favorite
+   * @param b Another Favorite
+   */
+export function bookmarkableLabelComparator(a: Bookmarkable, b: Bookmarkable) {
+    return a.label.localeCompare(b.label);
 }

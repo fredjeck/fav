@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { Favorite, FavoriteKind } from './model';
+import { Bookmarkable, bookmarkableComparator, Favorite, Group, isGroup } from './model';
 import { v4 as uuidv4 } from 'uuid';
 
 export type OnStoreLoadedHandler = () => void;
@@ -13,7 +13,9 @@ export class FavoriteStore {
     readonly onStoreLoaded: vscode.Event<undefined> = this._onStoreLoaded.event;
 
     private static _instance: FavoriteStore; // Current store instance
-    private _favorites: Favorite[] = []; // In memory collection of Favorites
+
+    private _favorites: Bookmarkable[] = []; // In memory collection of Favorites
+    private _saveRequired = false; // When true, means that fixes have been made while loading favorites, and that the result should be saved 
 
     private _storeUri: vscode.Uri;
     get storeUri(): vscode.Uri {
@@ -32,7 +34,7 @@ export class FavoriteStore {
      * A store instance should be obtained via the load method for an initial call() and via the current() method for any subsequent calls.
      * @param context The extension context we are running in
      */
-    private constructor(private context: vscode.ExtensionContext, loaded: OnStoreLoadedHandler) {
+    private constructor(context: vscode.ExtensionContext, loaded: OnStoreLoadedHandler) {
         var globalStorageUri = context.globalStorageUri;
         vscode.workspace.fs.createDirectory(globalStorageUri);
         this._storeUri = vscode.Uri.joinPath(globalStorageUri, 'favorites.json');
@@ -57,63 +59,73 @@ export class FavoriteStore {
      * Missing UUIDS and parent IDs will be automatically filled upon loading.
      * @emits onStoreLoaded
      */
-    async refresh():Promise<void> {
+    async refresh(): Promise<void> {
         // When loading the favorites from the json file, it can happen that the json is malformed and needs to be fixed.
         // If so immediately after loading the favorites we re-save the corrected data.
         let saveRequired = false;
         const buffer = await vscode.workspace.fs.readFile(this._storeUri);
 
-        this._favorites = (JSON.parse(buffer.toString()) as Favorite[])?.map(f => {
-            let fav = Object.assign(new Favorite(), f);
-            if (!f.uuid) {
-                fav.uuid = uuidv4();
-                saveRequired = true;
-            }
-            if (f.children && f.children.length) {
-                fav.children = f.children.map(child => {
-                    let c = Object.assign(new Favorite(), child);
-                    c.parent = fav.uuid;
-                    return c;
-                });
-            }
-            return fav;
-        }) || [];
+        this._favorites = (JSON.parse(buffer.toString()) as any[])?.map(f => this.restore(f)) || [];
 
         // We fixed the structure, a save is neede.
-        if (saveRequired) {
+        if (this._saveRequired) {
             await this.persist();
+            this._saveRequired = false;
         }
 
         this._onStoreLoaded.fire(undefined);
     }
 
     /**
-     * Adds a Favorite to the store and notifies all the subscribers of the newly added favorite.
-     * No duplication check is performed on addition.
-     * @param fav The favorites to add
+     * Converts obj to its Bookmarkable equivalent
+     * @param obj An object to convert from storage to full fledge object
      */
-    public async add(...fav: Favorite[]): Promise<void> {
-        this._favorites.push(...fav);
-        await this.persist();
+    private restore(obj:any):Bookmarkable{
+        if (isGroup(obj)) {
+            let group = Object.assign(new Group(), obj);
+            if (!obj.uuid) {
+                group.uuid = uuidv4();
+                this._saveRequired = true;
+            }
+            group.children = obj.children.map((child:any)=>this.restore(child));
+            return group;
+        } else {
+            let fav = Object.assign(new Favorite(), obj);
+            if (!obj.uuid) {
+                fav.uuid = uuidv4();
+                this._saveRequired = true;
+            }
+            return fav;
+        }
+    }
+
+    /**
+     * Adds a Bookmarkable to the store.
+     * No duplication check is performed on addition.
+     * @param bk The favorites to add
+     */
+    public async add(...bk: Bookmarkable[]): Promise<void> {
+        this._favorites.push(...bk);
+        this.persist();
     }
 
     /**
      * Updates an already existing Favorite in the store.
-     * @param fav The favorites to update
+     * @param bk The favorites to update
      */
-    public async update(...fav: (Favorite | undefined)[]): Promise<void> {
+    public async update(...bk: Bookmarkable[]): Promise<void> {
         await this.persist();
     }
 
     /**
      * Removes a favorite from the store.
-     * @param fav The favorites to add
+     * @param bk The favorites to add
      */
-    public async delete(...fav: Favorite[]): Promise<void> {
-        fav.forEach(x => {
+    public async delete(...bk: Bookmarkable[]): Promise<void> {
+        bk.forEach(x => {
             let parent = this.getParent(x);
-            if (parent) {
-                parent?.removeChild(x);
+            if (parent && isGroup(parent)) {
+                (parent as Group).removeChild(x);
             } else {
                 // No parents, top level favorite
                 let index = this._favorites.findIndex(y => y.uuid === x.uuid);
@@ -125,31 +137,31 @@ export class FavoriteStore {
     }
 
     /**
-     * Returns a shallow copy of all the favorites in the store.
-     * The returned array is a copy of the underlying storage which contains references to the original Favorites.
-     * Any change to a Favorite in this collection followed by a crud operation will commit the changes in the underlying storage.
-     * @returns all the Favorites in the store. 
+     * Returns a shallow copy of all the Bookmarkables in the store.
+     * The returned array is a copy of the underlying storage which contains references to the original Bookmarkable.
+     * Any change to a Bookmarkable in this collection followed by a crud operation will commit the changes in the underlying storage.
+     * @returns all the Bookmarkables in the store. 
      */
-    public favorites(): Favorite[] {
-        return this._favorites.sort(Favorite.comparatorFn);
+    public all(): Bookmarkable[] {
+        return this._favorites.sort(bookmarkableComparator);
     }
 
     /**
-     * Returns shallow a copy of all the groups in the store
-     * The returned array is a copy of the underlying storage which contains references to the original Favorites.
-     * Any change to a Favorite in this collection followed by an addition/update operation will commit the changes in the underlying storage.
-     * @returns all the Favorites in the store. 
+     * Returns shallow a copy of all the Groups in the store
+     * The returned array is a copy of the underlying storage which contains references to the original Groups.
+     * Any change to a Group in this collection followed by an addition/update operation will commit the changes in the underlying storage.
+     * @returns all the Group in the store. 
      */
-    public groups(): Favorite[] {
-        return this._favorites.filter(f => FavoriteKind.Group === f.kind).sort(Favorite.comparatorFn);
+    public groups(): Group[] {
+        return this._favorites.filter(isGroup).sort(bookmarkableComparator) as Group[];
     }
 
     /**
-     * @readonly The provided Favorite's parent or undefined if no parents are declared nor found.
+     * @readonly The provided Bookmarkable's parent or undefined if no parents are declared nor found.
      */
-    public getParent(fav: Favorite): Favorite | undefined {
-        if (!fav.parent) { return undefined; }
-        return this._favorites.find(x => x.uuid === fav.parent);
+    public getParent(bk: Bookmarkable): Group | undefined {
+        if (!bk.parent) { return undefined; }
+        return this._favorites.find(x => x.uuid === bk.parent) as Group;
     }
 
     /**

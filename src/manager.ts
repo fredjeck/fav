@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { Favorite, FavoriteKind } from './model';
+import { Bookmarkable, bookmarkableLabelComparator, Favorite, Group, isGroup } from './model';
 import { FavoriteStore } from './store';
 import { FavoritesTreeDataProvider } from './tree';
 import { Utils } from './utils';
@@ -30,7 +30,7 @@ export enum Commands {
  */
 export class FavoriteManager {
 
-    private _treeView: vscode.TreeView<Favorite>; // Favorites tree view mainly used for revealing favorites upon updates
+    private _treeView: vscode.TreeView<Bookmarkable>; // Favorites tree view mainly used for revealing favorites upon updates
     private _store: FavoriteStore; // Underlying storage
     private _provider: FavoritesTreeDataProvider; // Treeview Data provider
 
@@ -71,7 +71,6 @@ export class FavoriteManager {
         let fav = new Favorite();
         fav.label = label;
         fav.resourcePath = path || '';
-        fav.kind = FavoriteKind.File;
 
         this._store.add(fav);
         this._provider.refresh();
@@ -103,7 +102,7 @@ export class FavoriteManager {
             let fav = new Favorite();
             fav.label = label;
             fav.resourcePath = path || '';
-            fav.kind = FavoriteKind.File;
+
             group?.addChild(fav);
             this._store.update(group);
             this._provider.refresh(group);
@@ -134,35 +133,35 @@ export class FavoriteManager {
      * Shows the user a QuickPick in which he can choose the favorite to open.
      */
     async openFavorite(): Promise<void> {
-        let favorites = this._store.favorites().flatMap(x => {
-            if (FavoriteKind.Group === x.kind) {
-                return x.children.map(child => {
-                    child.description = `  $(folder) ${x.label}`;
+        let favorites = this._store.all().flatMap(x => {
+            if (isGroup(x)) {
+                return (x as Group).children.map(child => {
+                    (child as Favorite).description = `  $(folder) ${x.label}`;
                     return child;
                 });
             } else {
                 return [x];
             }
-        }).sort(Favorite.ignoreKindComparatorFn);
+        }).sort(bookmarkableLabelComparator);
 
         let favorite = await vscode.window.showQuickPick(favorites);
         if (favorite) {
-            vscode.window.showTextDocument(favorite.resourceUri, { preview: false });
+            vscode.window.showTextDocument((favorite as Favorite).resourceUri, { preview: false });
         }
     }
 
     /**
      * Opens all the Favorites registered in the group selected by the user.
      * Group selection is performed via QuickPick.
-     * @param fav A favorite group, if no group is provided the user will be prompted to pick a group.
+     * @param group A favorite group, if no group is provided the user will be prompted to pick a group.
      */
-    async openGroup(fav: Favorite | undefined): Promise<void> {
-        if (!fav || FavoriteKind.Group !== fav.kind || !fav.children || fav.children.length === 0) {
-            fav = await this.promptGroupSelection();
+    async openGroup(group: Group | undefined): Promise<void> {
+        if (!group || !group.hasChildren) {
+            group = await this.promptGroupSelection();
         }
 
-        if (fav) {
-            fav.children.forEach(f => vscode.window.showTextDocument(f.resourceUri, { preview: false }));
+        if (group) {
+            group.children.forEach(f => vscode.window.showTextDocument((f as Favorite).resourceUri, { preview: false }));
         }
     }
 
@@ -173,25 +172,28 @@ export class FavoriteManager {
         let label = await vscode.window.showInputBox({ prompt: 'New favorite group name :', value: 'New group' });
         if (!label) { return; }
 
-        let fav = new Favorite();
-        fav.label = label;
-        fav.kind = FavoriteKind.Group;
+        let group = new Group();
+        group.label = label;
 
-        this._store.add(fav);
+        this._store.add(group);
         this._provider.refresh(undefined);
-        this._treeView.reveal(fav);
+        this._treeView.reveal(group);
     }
 
     /**
      * Deletes a Favorite from the stored Favorites.
      * @param favorite The Favorite to delete
      */
-    async removeFavorite(favorite: Favorite): Promise<void> {
+    async removeFavorite(favorite: Bookmarkable): Promise<void> {
         if (favorite) {
             var message = `Remove '${favorite.label}' from your favorites ?`;
-            if (FavoriteKind.Group === favorite.kind && favorite.children && favorite.children.length > 0) {
-                message = `Remove the '${favorite.label}' group and all its favorites - ${favorite.children.length} favorite(s) ?`;
+            if (isGroup(favorite)) {
+                let group = favorite as Group;
+                if (group.hasChildren) {
+                    message = `Remove the '${group.label}' group and all its favorites - ${group.children.length} favorite(s) ?`;
+                }
             }
+
 
             let choice = await vscode.window.showWarningMessage(message, 'Yes', 'No');
             if ('Yes' === choice) {
@@ -214,7 +216,7 @@ export class FavoriteManager {
         let group = await this.promptGroupSelection(parent);
         if (group) {
             if (parent) {
-                parent.removeChild(favorite);
+                (parent as Group).removeChild(favorite);
             } else {
                 // Top level Favorite
                 this._store.delete(favorite);
@@ -229,16 +231,16 @@ export class FavoriteManager {
 
     /**
      * Renames a Favorite'
-     * @param favorite The Favorite to rename
+     * @param bk The Favorite to rename
      */
-    async renameFavorite(favorite: Favorite): Promise<void> {
-        if (favorite) {
-            let label = await vscode.window.showInputBox({ prompt: 'Rename to', value: favorite.label });
+    async renameFavorite(bk: Bookmarkable): Promise<void> {
+        if (bk) {
+            let label = await vscode.window.showInputBox({ prompt: 'Rename to', value: bk.label });
             if (label) {
-                favorite.label = label;
-                this._store.update(favorite);
-                this._provider.refresh(favorite);
-                this._treeView.reveal(favorite);
+                bk.label = label;
+                this._store.update(bk);
+                this._provider.refresh(bk);
+                this._treeView.reveal(bk);
             }
         }
     }
@@ -290,7 +292,7 @@ export class FavoriteManager {
     /**
      * Opens a quickpick and prompts the user to select a Favorite group.
      */
-    private promptGroupSelection(...exclusions: (Favorite | undefined)[]): Thenable<Favorite | undefined> {
-        return vscode.window.showQuickPick(this._store.favorites().filter(f => FavoriteKind.Group === f.kind && !exclusions.find(x => x?.uuid === f.uuid)));
+    private promptGroupSelection(...exclusions: (Group | undefined)[]): Thenable<Group | undefined> {
+        return vscode.window.showQuickPick(this._store.groups().filter(f => !exclusions.find(x => x?.uuid === f.uuid)));
     }
 }
