@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { Bookmarkable, bookmarkableLabelComparator, Favorite, Group, isGroup } from './model';
+import { Bookmarkable, bookmarkableLabelComparator, Favorite, Group } from './model';
 import { FavoriteStore } from './store';
 import { FavoritesTreeDataProvider } from './tree';
 import { Utils } from './utils';
@@ -20,6 +20,7 @@ export enum Commands {
     ContextFavoriteRemove = 'fav.context.removeFavorite',
     ContextFavoriteRename = 'fav.context.renameFavorite',
     ContextResourceOpen = 'fav.context.openResource',
+    ContextCreateGroup = 'fav.context.createGroup',
     ContextGroupOpen = 'fav.context.openGroup',
     MenuFavoriteActiveFile = 'fav.menu.favoriteActiveFile',
     MenuFavoriteActiveFileToGroup = 'fav.menu.favoriteActiveFileToGroup',
@@ -133,16 +134,7 @@ export class FavoriteManager {
      * Shows the user a QuickPick in which he can choose the favorite to open.
      */
     async openFavorite(): Promise<void> {
-        let favorites = this._store.all().flatMap(x => {
-            if (isGroup(x)) {
-                return (x as Group).children.map(child => {
-                    (child as Favorite).description = `  $(folder) ${x.label}`;
-                    return child;
-                });
-            } else {
-                return [x];
-            }
-        }).sort(bookmarkableLabelComparator);
+        let favorites = this._store.favorites();
 
         let favorite = await vscode.window.showQuickPick(favorites);
         if (favorite) {
@@ -155,7 +147,7 @@ export class FavoriteManager {
      * Group selection is performed via QuickPick.
      * @param group A favorite group, if no group is provided the user will be prompted to pick a group.
      */
-    async openGroup(group: Group | undefined): Promise<void> {
+    async openGroup(group?: Group): Promise<void> {
         if (!group || !group.hasChildren) {
             group = await this.promptGroupSelection();
         }
@@ -168,16 +160,21 @@ export class FavoriteManager {
     /**
      * Adds a new group to the favorites bar.
      */
-    async createGroup(): Promise<void> {
+    async createGroup(parent?: Group): Promise<void> {
         let label = await vscode.window.showInputBox({ prompt: 'New favorite group name :', value: 'New group' });
         if (!label) { return; }
 
         let group = new Group();
         group.label = label;
 
-        this._store.add(group);
+        if (parent) {
+            parent.addChild(group);
+            this._store.update();
+        } else {
+            this._store.add(group);
+        }
         this._provider.refresh(undefined);
-        this._treeView.reveal(group);
+        this._treeView.reveal(parent ? parent : group);
     }
 
     /**
@@ -187,7 +184,7 @@ export class FavoriteManager {
     async removeFavorite(favorite: Bookmarkable): Promise<void> {
         if (favorite) {
             var message = `Remove '${favorite.label}' from your favorites ?`;
-            if (isGroup(favorite)) {
+            if (Group.isGroup(favorite)) {
                 let group = favorite as Group;
                 if (group.hasChildren) {
                     message = `Remove the '${group.label}' group and all its favorites - ${group.children.length} favorite(s) ?`;
@@ -211,12 +208,10 @@ export class FavoriteManager {
         if (!favorite) {
             return;
         }
-        let parent = this._store.getParent(favorite);
-
-        let group = await this.promptGroupSelection(parent);
+        let group = await this.promptGroupSelection(favorite.parent);
         if (group) {
-            if (parent) {
-                (parent as Group).removeChild(favorite);
+            if (favorite.parent) {
+                (favorite.parent as Group).removeChild(favorite);
             } else {
                 // Top level Favorite
                 this._store.delete(favorite);
@@ -272,6 +267,7 @@ export class FavoriteManager {
         context.subscriptions.push(vscode.commands.registerCommand(Commands.ContextFavoriteRename, this.renameFavorite, this));
         context.subscriptions.push(vscode.commands.registerCommand(Commands.ContextFavoriteMove, this.moveFavorite, this));
         context.subscriptions.push(vscode.commands.registerCommand(Commands.ContextGroupOpen, this.openGroup, this));
+        context.subscriptions.push(vscode.commands.registerCommand(Commands.ContextCreateGroup, this.createGroup, this));
         context.subscriptions.push(vscode.commands.registerCommand(Commands.ContextResourceOpen, this.openResource, this));
     }
 
@@ -292,7 +288,7 @@ export class FavoriteManager {
     /**
      * Opens a quickpick and prompts the user to select a Favorite group.
      */
-    private promptGroupSelection(...exclusions: (Group | undefined)[]): Thenable<Group | undefined> {
-        return vscode.window.showQuickPick(this._store.groups().filter(f => !exclusions.find(x => x?.uuid === f.uuid)));
+    private promptGroupSelection(...exclusions: (Bookmarkable | undefined)[]): Thenable<Group | undefined> {
+        return vscode.window.showQuickPick(this._store.groups().filter(f => !exclusions.find(x => x === f)));
     }
 }

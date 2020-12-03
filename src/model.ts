@@ -1,10 +1,9 @@
 import { ThemeIcon, TreeItem, TreeItemCollapsibleState, Uri } from 'vscode';
-import { v4 as uuidv4 } from 'uuid';
 
 export interface Bookmarkable {
     label: string; // User given label
-    uuid: string; // Unique ID for the for this resource
-    parent?: string; // Uuid of its parent
+    parent?: Bookmarkable; // Uuid of its parent
+    description?: string; // Used only for QuickPick displays. Contains the parent group if any, updated before each display
 
     /**
      * Converts the present object to a TreeItem.
@@ -19,17 +18,27 @@ export interface Bookmarkable {
      * @see Array.sort
      */
     compareTo(another: Bookmarkable): number;
+
+    /**
+     * Any bookmarkable element should control its serialization.
+     * @param key 
+     */
+    toJSON(key: any): void;
 }
 
 export abstract class Bookmark implements Bookmarkable {
     label: string; // User given label
-    uuid: string; // Unique ID for the for this resource
-    parent?: string; // Uuid of the parent Favorite
+    description?: string; // Used only for QuickPick displays. Contains the parent group if any, updated before each display
 
     constructor() {
-        this.uuid = uuidv4();
         this.label = '';
     }
+
+    /**
+     * Any bookmarkable element should control its serialization.
+     * @param key 
+     */
+    abstract toJSON(key: any): void;
 
     /**
      * Converts the present object to a TreeItem.
@@ -52,6 +61,7 @@ export abstract class Bookmark implements Bookmarkable {
  * A Bookmarkable object which can contain sub items.
  */
 export class Group extends Bookmark {
+    parent?: Group; // Uuid of the parent Favorite
     children: Bookmarkable[] = []; // Child items
 
 
@@ -85,7 +95,7 @@ export class Group extends Bookmark {
      */
     addChild(item: Bookmarkable) {
         this.children.push(item);
-        item.parent = this.uuid;
+        item.parent = this;
     }
 
     /**
@@ -93,10 +103,49 @@ export class Group extends Bookmark {
      * @param item The Bookmarkable to remove
      */
     removeChild(item: Bookmarkable) {
-        var index = this.children.findIndex(x => x.uuid === item.uuid);
+        var index = this.children.indexOf(item);
         if (index < 0) { return; }
         this.children[index].parent = undefined;
         this.children.splice(index, 1);
+    }
+
+    toJSON(key: any) {
+        return { label: this.label, children: this.children };
+    }
+
+    /**
+     * Checks wether an IFavorite is a group.
+     * @param a An IFavorite
+     */
+    static isGroup(a: Bookmarkable) {
+        return (a as Group).children !== undefined;
+    }
+
+    groups(): Group[] {
+        let res = this.children.flatMap(x => {
+            if (Group.isGroup(x)) {
+                let g = x as Group;
+                let childrens = g.groups();
+                childrens.push(g);
+                return childrens;
+            } else {
+                return [] as Group[];
+            }
+        });
+        return res;
+    }
+
+    favorites(ancestors: Group[]): Favorite[] {
+        ancestors.push(this);
+        var path = ancestors.reduce((acc, val, index) => acc + `\\${val.label}`, '');
+        var favs = this.children.filter(x => !Group.isGroup(x)).map(y => {
+            y.description = ` $(folder) ${path}`;
+            return y as Favorite;
+        });
+        
+        let childs = this.children.filter(Group.isGroup).flatMap(x => (x as Group).favorites(ancestors));
+        ancestors.pop();
+        return favs.concat(childs);
     }
 }
 
@@ -104,8 +153,8 @@ export class Group extends Bookmark {
  * A Favorited file.
  */
 export class Favorite extends Bookmark {
+    parent?: Bookmarkable; // Uuid of the parent Favorite
     resourcePath: string; // Path to the resource
-    description?: string; // Used only for QuickPick displays. Contains the parent group if any, updated before each display
 
     /**
      * @returns An additional description for the Favorite to be displayed in quick pick items (only if using user defined label)
@@ -144,14 +193,10 @@ export class Favorite extends Bookmark {
         };
         return item;
     }
-}
 
-/**
- * Checks wether an IFavorite is a group.
- * @param a An IFavorite
- */
-export function isGroup(a: Bookmarkable) {
-    return (a as Group).children !== undefined;
+    toJSON(key: any) {
+        return { label: this.label, resourcePath: this.resourcePath };
+    }
 }
 
 /**
@@ -163,8 +208,8 @@ export function isGroup(a: Bookmarkable) {
 * @param b Another Favorite
 */
 export function bookmarkableComparator(a: Bookmarkable, b: Bookmarkable): number {
-    if (isGroup(a) !== isGroup(b)) {
-        return isGroup(a) ? -1 : 1;
+    if (Group.isGroup(a) !== Group.isGroup(b)) {
+        return Group.isGroup(a) ? -1 : 1;
     }
     return a.label.localeCompare(b.label);
 }

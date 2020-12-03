@@ -1,5 +1,5 @@
 import { Event, EventEmitter, ProviderResult, TreeDataProvider, TreeItem } from 'vscode';
-import { Bookmarkable, bookmarkableComparator, Favorite, Group, isGroup } from './model';
+import { Bookmarkable, bookmarkableComparator, Group } from './model';
 import { FavoriteStore } from './store';
 
 /**
@@ -24,13 +24,13 @@ export class FavoritesTreeDataProvider implements TreeDataProvider<Bookmarkable>
     }
 
     getParent(element: Bookmarkable): ProviderResult<Bookmarkable> {
-        return this._store.getParent(element);
+        return element.parent;
     }
 
     getChildren(element?: Bookmarkable): ProviderResult<Bookmarkable[]> {
         if (!element) {
             return this._store.all();
-        } else if (isGroup(element)) {
+        } else if (Group.isGroup(element)) {
             return (element as Group).children.sort(bookmarkableComparator);
         }
         return undefined;

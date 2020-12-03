@@ -1,6 +1,6 @@
+import { chdir } from 'process';
 import * as vscode from 'vscode';
-import { Bookmarkable, bookmarkableComparator, Favorite, Group, isGroup } from './model';
-import { v4 as uuidv4 } from 'uuid';
+import { Bookmarkable, bookmarkableComparator, Favorite, Group } from './model';
 
 export type OnStoreLoadedHandler = () => void;
 
@@ -15,7 +15,6 @@ export class FavoriteStore {
     private static _instance: FavoriteStore; // Current store instance
 
     private _favorites: Bookmarkable[] = []; // In memory collection of Favorites
-    private _saveRequired = false; // When true, means that fixes have been made while loading favorites, and that the result should be saved 
 
     private _storeUri: vscode.Uri;
     get storeUri(): vscode.Uri {
@@ -66,13 +65,6 @@ export class FavoriteStore {
         const buffer = await vscode.workspace.fs.readFile(this._storeUri);
 
         this._favorites = (JSON.parse(buffer.toString()) as any[])?.map(f => this.restore(f)) || [];
-
-        // We fixed the structure, a save is neede.
-        if (this._saveRequired) {
-            await this.persist();
-            this._saveRequired = false;
-        }
-
         this._onStoreLoaded.fire(undefined);
     }
 
@@ -80,20 +72,15 @@ export class FavoriteStore {
      * Converts obj to its Bookmarkable equivalent
      * @param obj An object to convert from storage to full fledge object
      */
-    private restore(obj:any):Bookmarkable{
-        if (isGroup(obj)) {
+    private restore(obj: any, parent?: Bookmarkable): Bookmarkable {
+        if (Group.isGroup(obj)) {
             let group = Object.assign(new Group(), obj);
-            if (!obj.uuid) {
-                group.uuid = uuidv4();
-                this._saveRequired = true;
-            }
-            group.children = obj.children.map((child:any)=>this.restore(child));
+            group.children = obj.children.map((child: any) => this.restore(child, group));
             return group;
         } else {
             let fav = Object.assign(new Favorite(), obj);
-            if (!obj.uuid) {
-                fav.uuid = uuidv4();
-                this._saveRequired = true;
+            if (parent) {
+                fav.parent = parent;
             }
             return fav;
         }
@@ -123,12 +110,11 @@ export class FavoriteStore {
      */
     public async delete(...bk: Bookmarkable[]): Promise<void> {
         bk.forEach(x => {
-            let parent = this.getParent(x);
-            if (parent && isGroup(parent)) {
-                (parent as Group).removeChild(x);
+            if (x.parent && Group.isGroup(x.parent)) {
+                (x.parent as Group).removeChild(x);
             } else {
                 // No parents, top level favorite
-                let index = this._favorites.findIndex(y => y.uuid === x.uuid);
+                let index = this._favorites.indexOf(x);
                 this._favorites.splice(index, 1);
             }
         });
@@ -153,21 +139,29 @@ export class FavoriteStore {
      * @returns all the Group in the store. 
      */
     public groups(): Group[] {
-        return this._favorites.filter(isGroup).sort(bookmarkableComparator) as Group[];
+        let groups = this._favorites.filter(Group.isGroup);
+        let res = groups.flatMap(g => {
+            let children = (g as Group).groups();
+            children.push((g as Group));
+            return children;
+        });
+        return res.sort(bookmarkableComparator) as Group[];
     }
 
-    /**
-     * @readonly The provided Bookmarkable's parent or undefined if no parents are declared nor found.
-     */
-    public getParent(bk: Bookmarkable): Group | undefined {
-        if (!bk.parent) { return undefined; }
-        return this._favorites.find(x => x.uuid === bk.parent) as Group;
+    public favorites(): Favorite[] {
+        let favorites = this._favorites.filter(x => !Group.isGroup(x)) as Favorite[];
+        let res = this._favorites.filter(Group.isGroup).flatMap(g => {
+            return (g as Group).favorites([] as Group[]);
+        });
+        return favorites.concat(res);
     }
 
     /**
      * Saves the favorites to the underlying storage
      */
     private persist(): Thenable<void> {
+        let proto = Group.prototype;
+
         return vscode.workspace.fs.writeFile(this.storeUri, Buffer.from(JSON.stringify(this._favorites, null, 4)));
     }
 }
