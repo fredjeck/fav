@@ -79,7 +79,7 @@ export class FavoriteManager {
     }
 
     /**
-     * Adds the selected GUI element to the Favorites list in a group.
+     * Adds the selected GUI element to the Favorites list under the selected group.
      * Prompts the user via QuickPick for the group to add the Favorite to.
      * @param node An element selected in the GUI.
      */
@@ -89,13 +89,7 @@ export class FavoriteManager {
             return;
         }
 
-        let groups = this._store.groups();
-        if (!groups || groups.length === 0) {
-            vscode.window.showWarningMessage('No favorite groups found, please define a group first');
-            return;
-        }
-
-        let group = await vscode.window.showQuickPick(groups);
+        let group = await this.promptGroupSelection();
         if (group) {
             let label = await vscode.window.showInputBox({ prompt: 'Label', value: Utils.fileName(path as string) });
             if (!label) { return; }
@@ -138,7 +132,7 @@ export class FavoriteManager {
 
         let favorite = await vscode.window.showQuickPick(favorites);
         if (favorite) {
-            vscode.window.showTextDocument((favorite as Favorite).resourceUri, { preview: false });
+            vscode.window.showTextDocument(favorite.resourceUri, { preview: false });
         }
     }
 
@@ -148,12 +142,12 @@ export class FavoriteManager {
      * @param group A favorite group, if no group is provided the user will be prompted to pick a group.
      */
     async openGroup(group?: Group): Promise<void> {
-        if (!group || !group.hasChildren) {
+        if (!group) {
             group = await this.promptGroupSelection();
         }
 
         if (group) {
-            group.children.forEach(f => vscode.window.showTextDocument((f as Favorite).resourceUri, { preview: false }));
+            group.favoritesDeep().forEach(f => vscode.window.showTextDocument(f.resourceUri, { preview: false }));
         }
     }
 
@@ -183,16 +177,7 @@ export class FavoriteManager {
      */
     async removeFavorite(favorite: Bookmarkable): Promise<void> {
         if (favorite) {
-            var message = `Remove '${favorite.label}' from your favorites ?`;
-            if (Group.isGroup(favorite)) {
-                let group = favorite as Group;
-                if (group.hasChildren) {
-                    message = `Remove the '${group.label}' group and all its favorites - ${group.children.length} favorite(s) ?`;
-                }
-            }
-
-
-            let choice = await vscode.window.showWarningMessage(message, 'Yes', 'No');
+            let choice = await vscode.window.showWarningMessage(`Remove '${favorite.label}' from your favorites ?`, 'Yes', 'No');
             if ('Yes' === choice) {
                 this._store.delete(favorite);
                 this._provider.refresh(undefined);
@@ -204,14 +189,14 @@ export class FavoriteManager {
      * Prompts the user for a group to move the favorite to.
      * @param favorite The favorite to move to another group
      */
-    async moveFavorite(favorite: Favorite): Promise<void> {
+    async moveFavorite(favorite: Bookmarkable): Promise<void> {
         if (!favorite) {
             return;
         }
         let group = await this.promptGroupSelection(favorite.parent);
         if (group) {
             if (favorite.parent) {
-                (favorite.parent as Group).removeChild(favorite);
+                (favorite as Group).parent?.removeChild(favorite);
             } else {
                 // Top level Favorite
                 this._store.delete(favorite);
@@ -288,7 +273,14 @@ export class FavoriteManager {
     /**
      * Opens a quickpick and prompts the user to select a Favorite group.
      */
-    private promptGroupSelection(...exclusions: (Bookmarkable | undefined)[]): Thenable<Group | undefined> {
+    private async promptGroupSelection(...exclusions: (Bookmarkable | undefined)[]): Promise<Group | undefined> {
+
+        let groups = this._store.groups();
+        if (!groups || groups.length === 0) {
+            vscode.window.showWarningMessage('No favorite groups found, please define a group first');
+            return undefined;
+        }
+
         return vscode.window.showQuickPick(this._store.groups().filter(f => !exclusions.find(x => x === f)));
     }
 }

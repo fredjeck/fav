@@ -29,7 +29,7 @@ export class FavoritesTreeDataProvider implements TreeDataProvider<Bookmarkable>
 
     getChildren(element?: Bookmarkable): ProviderResult<Bookmarkable[]> {
         if (!element) {
-            return this._store.all();
+            return this._store.root();
         } else if (Group.isGroup(element)) {
             return (element as Group).children.sort(bookmarkableComparator);
         }

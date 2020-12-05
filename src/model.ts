@@ -1,9 +1,13 @@
 import { ThemeIcon, TreeItem, TreeItemCollapsibleState, Uri } from 'vscode';
+import { sep } from 'path';
 
+/**
+ * Base interace for any object which can be bookmarked and rendered in the Favorite's bar.
+ */
 export interface Bookmarkable {
-    label: string; // User given label
-    parent?: Bookmarkable; // Uuid of its parent
-    description?: string; // Used only for QuickPick displays. Contains the parent group if any, updated before each display
+    label: string; // The object's human readable label, displayed in the Favorite's bar and in Quick Picks
+    parent?: Bookmarkable; // A Bookmarkable can be nested under another Bookmarkable element, if so this property holds a reference to its parent
+    description?: string; // An extended description - to be used as additional informatio  in QuickPicks
 
     /**
      * Converts the present object to a TreeItem.
@@ -20,77 +24,72 @@ export interface Bookmarkable {
     compareTo(another: Bookmarkable): number;
 
     /**
-     * Any bookmarkable element should control its serialization.
+     * Any Bookmarkable element should control its serialization and remove cyclic dependencies
      * @param key 
+     * @see Object.toJSON
      */
     toJSON(key: any): void;
 }
 
+/**
+ * Base abstract class for Bookmarkable objects.
+ */
 export abstract class Bookmark implements Bookmarkable {
-    label: string; // User given label
-    description?: string; // Used only for QuickPick displays. Contains the parent group if any, updated before each display
-
-    constructor() {
-        this.label = '';
-    }
+    label = '';
+    parent?: Bookmarkable;
 
     /**
-     * Any bookmarkable element should control its serialization.
-     * @param key 
+     * @see Bookmarkable
      */
     abstract toJSON(key: any): void;
 
     /**
-     * Converts the present object to a TreeItem.
-     * @returns A TreeItem object
-     */
+    * @see Bookmarkable
+    */
     abstract toTreeItem(): TreeItem;
 
     /**
-     * Compares the present object to the provided one.
+     * Compares the present Bookmarkable to the provided one.
      * Comparison is done using the <pre>bookmarkableComparator</pre> function
      * @param another A Bookmarkable object to compare to
      * @returns -1, 0 or 1 if respectively this object is smaller, equal or greather than the one it is being compared to.
+     * @see Bookmarkable
      * @see Array.sort
      * @see bookmarkableComparator
      */
-    compareTo(other: Bookmarkable): number { return bookmarkableComparator(this, other); }
+    compareTo = (other: Bookmarkable): number => bookmarkableComparator(this, other);
 }
 
 /**
- * A Bookmarkable object which can contain sub items.
+ * A Group is a special kind of Bookmarkable object which can contain nested Bookmarkable objects.
  */
 export class Group extends Bookmark {
-    parent?: Group; // Uuid of the parent Favorite
-    children: Bookmarkable[] = []; // Child items
-
+    children: Bookmarkable[] = [];
+    parent?: Group;
 
     /**
-     * @returns true if this group has children
-     */
-    get hasChildren(): boolean {
-        return this.children && this.children.length > 0;
-    }
-
-    constructor() {
-        super();
+    * Checks wether a Bookmarkable object is a group.
+    * @param item A Bookmarkable object
+    */
+    static isGroup(item: Bookmarkable) {
+        return (item as Group).children !== undefined;
     }
 
     /**
-     * Converts the present object to a TreeItem.
-     * @returns A TreeItem object
+     * @see Bookmarkable
      */
     toTreeItem(): TreeItem {
         let item: TreeItem = new TreeItem('Undefined', TreeItemCollapsibleState.None);
         item = new TreeItem(this.label, TreeItemCollapsibleState.Collapsed);
         item.label = this.label;
         item.iconPath = ThemeIcon.Folder;
-        item.contextValue = 'group';
+        item.contextValue = this.favoritesDeep().length > 0 ? 'group' : 'group-empty';
         return item;
     }
 
     /**
-     * Adds a new child.
+     * Adds a new child to this group. 
+     * No duplication check is performed upon addition.
      * @param item The Bookmarkable to add
      */
     addChild(item: Bookmarkable) {
@@ -109,55 +108,56 @@ export class Group extends Bookmark {
         this.children.splice(index, 1);
     }
 
+    /**
+     * @see Object.toJSON
+     * @see Bookmarkable
+     */
     toJSON(key: any) {
         return { label: this.label, children: this.children };
     }
 
-    /**
-     * Checks wether an IFavorite is a group.
-     * @param a An IFavorite
-     */
-    static isGroup(a: Bookmarkable) {
-        return (a as Group).children !== undefined;
-    }
 
-    groups(): Group[] {
-        let res = this.children.flatMap(x => {
-            if (Group.isGroup(x)) {
-                let g = x as Group;
-                let childrens = g.groups();
-                childrens.push(g);
-                return childrens;
-            } else {
-                return [] as Group[];
-            }
+    /**
+     * @returns a flat list of all the groups nested in this group and its sub groups
+     */
+    groupsDeep(): Group[] {
+        let groups = this.children.filter(Group.isGroup) as Group[];
+        let res = groups.flatMap(x => {
+            let subgroups = x.groupsDeep();
+            subgroups.push(x);
+            return subgroups;
         });
         return res;
     }
 
-    favorites(ancestors: Group[]): Favorite[] {
+    /**
+     * @param ancestors A list of ancestor groups used to update the favorite's description.
+     * @returns a flat list of all the favorites nested in this group and its sub groups
+     */
+    favoritesDeep(ancestors: Group[] = []): Favorite[] {
         ancestors.push(this);
-        var path = ancestors.reduce((acc, val, index) => acc + `\\${val.label}`, '');
+        var breadcrumb = ancestors.reduce((acc, val, index) => acc + `${acc.length === 0 ? '' : sep}${val.label}`, '');
         var favs = this.children.filter(x => !Group.isGroup(x)).map(y => {
-            y.description = ` $(folder) ${path}`;
+            y.description = ` $(folder) ${breadcrumb}`;
             return y as Favorite;
         });
-        
-        let childs = this.children.filter(Group.isGroup).flatMap(x => (x as Group).favorites(ancestors));
+
+        let childs = this.children.filter(Group.isGroup).flatMap(x => (x as Group).favoritesDeep(ancestors));
         ancestors.pop();
         return favs.concat(childs);
     }
 }
 
 /**
- * A Favorited file.
+ * A Bookmarkable object which points to a file system resource.
  */
 export class Favorite extends Bookmark {
-    parent?: Bookmarkable; // Uuid of the parent Favorite
-    resourcePath: string; // Path to the resource
+    resourcePath = ''; // Path to the file system resource
+    parent?: Group;
 
     /**
-     * @returns An additional description for the Favorite to be displayed in quick pick items (only if using user defined label)
+     * @returns A human-readable string which is rendered less prominent in a separate line in QuickPicks
+     * @see QuickPickItem.detail
      */
     get detail(): string | undefined {
         return this.label !== this.resourcePath ? this.resourcePath : undefined;
@@ -168,11 +168,6 @@ export class Favorite extends Bookmark {
      */
     get resourceUri(): Uri {
         return Uri.file(this.resourcePath);
-    }
-
-    constructor() {
-        super();
-        this.resourcePath = '';
     }
 
     /**

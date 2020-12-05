@@ -179,8 +179,7 @@
           "command": "fav.context.removeFavorite"
         },
         {
-          "command": "fav.context.moveFavorite",
-          "when": "viewItem != group"
+          "command": "fav.context.moveFavorite"
         },
         {
           "command": "fav.context.openGroup",

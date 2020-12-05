@@ -21,6 +21,9 @@ export class FavoriteStore {
         return this._storeUri;
     }
 
+    /**
+     * @returns the current instance of the Favorites store.
+     */
     static get instance() {
         if (!FavoriteStore._instance) {
             throw new Error('Favorites store has not been initialized');
@@ -61,7 +64,6 @@ export class FavoriteStore {
     async refresh(): Promise<void> {
         // When loading the favorites from the json file, it can happen that the json is malformed and needs to be fixed.
         // If so immediately after loading the favorites we re-save the corrected data.
-        let saveRequired = false;
         const buffer = await vscode.workspace.fs.readFile(this._storeUri);
 
         this._favorites = (JSON.parse(buffer.toString()) as any[])?.map(f => this.restore(f)) || [];
@@ -73,17 +75,17 @@ export class FavoriteStore {
      * @param obj An object to convert from storage to full fledge object
      */
     private restore(obj: any, parent?: Bookmarkable): Bookmarkable {
+        let bk: Bookmarkable;
         if (Group.isGroup(obj)) {
-            let group = Object.assign(new Group(), obj);
-            group.children = obj.children.map((child: any) => this.restore(child, group));
-            return group;
+            bk = Object.assign(new Group(), obj);
+            (bk as Group).children = obj.children.map((child: any) => this.restore(child, bk));
         } else {
-            let fav = Object.assign(new Favorite(), obj);
-            if (parent) {
-                fav.parent = parent;
-            }
-            return fav;
+            bk = Object.assign(new Favorite(), obj);
         }
+        if (parent) {
+            bk.parent = parent;
+        }
+        return bk;
     }
 
     /**
@@ -91,7 +93,7 @@ export class FavoriteStore {
      * No duplication check is performed on addition.
      * @param bk The favorites to add
      */
-    public async add(...bk: Bookmarkable[]): Promise<void> {
+    async add(...bk: Bookmarkable[]): Promise<void> {
         this._favorites.push(...bk);
         this.persist();
     }
@@ -100,7 +102,7 @@ export class FavoriteStore {
      * Updates an already existing Favorite in the store.
      * @param bk The favorites to update
      */
-    public async update(...bk: Bookmarkable[]): Promise<void> {
+    async update(...bk: Bookmarkable[]): Promise<void> {
         await this.persist();
     }
 
@@ -108,7 +110,7 @@ export class FavoriteStore {
      * Removes a favorite from the store.
      * @param bk The favorites to add
      */
-    public async delete(...bk: Bookmarkable[]): Promise<void> {
+    async delete(...bk: Bookmarkable[]): Promise<void> {
         bk.forEach(x => {
             if (x.parent && Group.isGroup(x.parent)) {
                 (x.parent as Group).removeChild(x);
@@ -118,7 +120,6 @@ export class FavoriteStore {
                 this._favorites.splice(index, 1);
             }
         });
-
         await this.persist();
     }
 
@@ -128,30 +129,33 @@ export class FavoriteStore {
      * Any change to a Bookmarkable in this collection followed by a crud operation will commit the changes in the underlying storage.
      * @returns all the Bookmarkables in the store. 
      */
-    public all(): Bookmarkable[] {
+    root(): Bookmarkable[] {
         return this._favorites.sort(bookmarkableComparator);
     }
 
     /**
-     * Returns shallow a copy of all the Groups in the store
+     * Returns flatened out copy of all the Groups an deep nested groups in the store.
      * The returned array is a copy of the underlying storage which contains references to the original Groups.
      * Any change to a Group in this collection followed by an addition/update operation will commit the changes in the underlying storage.
      * @returns all the Group in the store. 
      */
-    public groups(): Group[] {
-        let groups = this._favorites.filter(Group.isGroup);
+    groups(): Group[] {
+        let groups = this._favorites.filter(Group.isGroup) as Group[];
         let res = groups.flatMap(g => {
-            let children = (g as Group).groups();
+            let children = g.groupsDeep();
             children.push((g as Group));
             return children;
         });
         return res.sort(bookmarkableComparator) as Group[];
     }
 
-    public favorites(): Favorite[] {
+    /**
+     * Returns a flatened out list of all the Favorites currently in the store.
+     */
+    favorites(): Favorite[] {
         let favorites = this._favorites.filter(x => !Group.isGroup(x)) as Favorite[];
         let res = this._favorites.filter(Group.isGroup).flatMap(g => {
-            return (g as Group).favorites([] as Group[]);
+            return (g as Group).favoritesDeep([] as Group[]);
         });
         return favorites.concat(res);
     }
@@ -160,8 +164,6 @@ export class FavoriteStore {
      * Saves the favorites to the underlying storage
      */
     private persist(): Thenable<void> {
-        let proto = Group.prototype;
-
         return vscode.workspace.fs.writeFile(this.storeUri, Buffer.from(JSON.stringify(this._favorites, null, 4)));
     }
 }
