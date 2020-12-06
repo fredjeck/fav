@@ -1,4 +1,9 @@
 # Change Log
+
+## 1.3.0
+- Code cleanup
+- Added support for nested groups
+
 ## 1.2.1
 - Bug squashing
 - Changed tree update mechanism

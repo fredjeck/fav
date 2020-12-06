@@ -188,7 +188,7 @@
         },
         {
           "command": "fav.context.createGroup",
-          "when": "viewItem == group"
+          "when": "viewItem == group || viewItem == group-empty"
         }
       ],
       "view/title": [

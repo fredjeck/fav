@@ -12,7 +12,6 @@ export class FavoriteStore {
      */
     readonly onStoreLoaded: vscode.Event<undefined> = this._onStoreLoaded.event;
 
-    private static _instance: FavoriteStore; // Current store instance
 
     private _favorites: Bookmarkable[] = []; // In memory collection of Favorites
 
@@ -21,6 +20,8 @@ export class FavoriteStore {
         return this._storeUri;
     }
 
+
+    private static _instance: FavoriteStore; // Current store instance
     /**
      * @returns the current instance of the Favorites store.
      */

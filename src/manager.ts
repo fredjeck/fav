@@ -168,7 +168,7 @@ export class FavoriteManager {
             this._store.add(group);
         }
         this._provider.refresh(undefined);
-        this._treeView.reveal(parent ? parent : group);
+        this._treeView.reveal(group);
     }
 
     /**
