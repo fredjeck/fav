@@ -208,7 +208,8 @@
     "test": "node ./out/test/runTest.js",
     "package": "vsce package -o ./packages",
     "publish": "vsce publish",
-    "minor": "vsce publish minor"
+    "minor": "vsce publish minor",
+    "patch": "vsce publish patch"
   },
   "devDependencies": {
     "@types/glob": "^7.1.3",

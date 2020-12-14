@@ -1,5 +1,8 @@
 # Change Log
 
+# 1.4.0
+- The group picker now displays the group's path in the hierarchy
+
 ## 1.3.0
 - Code cleanup
 - Added support for nested groups
