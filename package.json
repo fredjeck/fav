@@ -207,7 +207,8 @@
     "lint": "eslint src --ext ts",
     "test": "node ./out/test/runTest.js",
     "package": "vsce package -o ./packages",
-    "publish": "vsce publish"
+    "publish": "vsce publish",
+    "minor": "vsce publish minor"
   },
   "devDependencies": {
     "@types/glob": "^7.1.3",
