@@ -120,13 +120,18 @@ export class Group extends Bookmark {
     /**
      * @returns a flat list of all the groups nested in this group and its sub groups
      */
-    groupsDeep(): Group[] {
+    groupsDeep(ancestors: Group[] = []): Group[] {
+        ancestors.push(this);
+        var breadcrumb = ancestors.reduce((acc, val, index) => acc + `${acc.length === 0 ? '' : sep}${val.label}`, '');
+
         let groups = this.children.filter(Group.isGroup) as Group[];
         let res = groups.flatMap(x => {
-            let subgroups = x.groupsDeep();
+            (x as Bookmarkable).description = ` $(folder) ${breadcrumb}`;
+            let subgroups = x.groupsDeep(ancestors);
             subgroups.push(x);
             return subgroups;
         });
+        ancestors.pop();
         return res;
     }
 
@@ -137,6 +142,7 @@ export class Group extends Bookmark {
     favoritesDeep(ancestors: Group[] = []): Favorite[] {
         ancestors.push(this);
         var breadcrumb = ancestors.reduce((acc, val, index) => acc + `${acc.length === 0 ? '' : sep}${val.label}`, '');
+
         var favs = this.children.filter(x => !Group.isGroup(x)).map(y => {
             y.description = ` $(folder) ${breadcrumb}`;
             return y as Favorite;

@@ -143,7 +143,7 @@ export class FavoriteStore {
     groups(): Group[] {
         let groups = this._favorites.filter(Group.isGroup) as Group[];
         let res = groups.flatMap(g => {
-            let children = g.groupsDeep();
+            let children = g.groupsDeep([]);
             children.push((g as Group));
             return children;
         });
@@ -156,7 +156,7 @@ export class FavoriteStore {
     favorites(): Favorite[] {
         let favorites = this._favorites.filter(x => !Group.isGroup(x)) as Favorite[];
         let res = this._favorites.filter(Group.isGroup).flatMap(g => {
-            return (g as Group).favoritesDeep([] as Group[]);
+            return (g as Group).favoritesDeep([]);
         });
         return favorites.concat(res);
     }
