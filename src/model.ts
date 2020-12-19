@@ -1,3 +1,4 @@
+import * as vscode from 'vscode';
 import { ThemeIcon, TreeItem, TreeItemCollapsibleState, Uri } from 'vscode';
 import { sep } from 'path';
 
@@ -29,6 +30,12 @@ export interface Bookmarkable {
      * @see Object.toJSON
      */
     toJSON(key: any): void;
+
+    /**
+     * Favorites are striving for litterally one thing : being activated by their hooman.
+     * Triggers the action linked to the favorite type.
+     */
+    activate(): void;
 }
 
 /**
@@ -47,6 +54,11 @@ export abstract class Bookmark implements Bookmarkable {
     * @see Bookmarkable
     */
     abstract toTreeItem(): TreeItem;
+
+    /**
+     * @see Bookmarkable
+     */
+    abstract activate(): void;
 
     /**
      * Compares the present Bookmarkable to the provided one.
@@ -152,6 +164,13 @@ export class Group extends Bookmark {
         ancestors.pop();
         return favs.concat(childs);
     }
+
+    /**
+     * @see Bookmarkable
+     */
+    activate(): void {
+        this.favoritesDeep().forEach(f => vscode.window.showTextDocument(f.resourceUri, { preview: false }));
+    }
 }
 
 /**
@@ -195,8 +214,18 @@ export class Favorite extends Bookmark {
         return item;
     }
 
+    /**
+     * @see Bookmarkable
+     */
     toJSON(key: any) {
         return { label: this.label, resourcePath: this.resourcePath };
+    }
+
+    /**
+     * @see Bookmarkable
+     */
+    activate(): void {
+        vscode.window.showTextDocument(this.resourceUri, { preview: false });
     }
 }
 

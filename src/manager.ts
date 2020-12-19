@@ -131,9 +131,7 @@ export class FavoriteManager {
         let favorites = this._store.favorites();
 
         let favorite = await vscode.window.showQuickPick(favorites);
-        if (favorite) {
-            vscode.window.showTextDocument(favorite.resourceUri, { preview: false });
-        }
+        favorite?.activate();
     }
 
     /**
@@ -146,9 +144,7 @@ export class FavoriteManager {
             group = await this.promptGroupSelection();
         }
 
-        if (group) {
-            group.favoritesDeep().forEach(f => vscode.window.showTextDocument(f.resourceUri, { preview: false }));
-        }
+        group?.activate();
     }
 
     /**
