@@ -1,6 +1,13 @@
 import * as vscode from 'vscode';
 import { ThemeIcon, TreeItem, TreeItemCollapsibleState, Uri } from 'vscode';
 import { sep } from 'path';
+import { glob, Glob } from 'glob';
+
+export enum BookmarkableKind{
+    Group,
+    Favorite,
+    Folder
+}
 
 /**
  * Base interace for any object which can be bookmarked and rendered in the Favorite's bar.
@@ -208,7 +215,7 @@ export class Favorite extends Bookmark {
         item.tooltip = this.resourcePath;
         item.command = {
             command: 'fav.context.openResource',
-            arguments: [item.resourceUri],
+            arguments: [this],
             title: 'Open Favorite'
         };
         return item;
@@ -226,6 +233,68 @@ export class Favorite extends Bookmark {
      */
     activate(): void {
         vscode.window.showTextDocument(this.resourceUri, { preview: false });
+    }
+}
+
+/**
+ * A Bookmarkable object which points to a folder
+ */
+export class Folder extends Bookmark {
+
+    static readonly DefaultFileFiter = '*.*';
+
+    resourcePath = ''; // Path to the file system resource
+    filter = Folder.DefaultFileFiter; // Glob filter
+    parent?: Group;
+
+    /**
+     * @returns A human-readable string which is rendered less prominent in a separate line in QuickPicks
+     * @see QuickPickItem.detail
+     */
+    get detail(): string | undefined {
+        return this.label !== this.resourcePath ? this.resourcePath : undefined;
+    }
+
+    /**
+     * @returns an URI object poiting to the underlying fs resource
+     */
+    get resourceUri(): Uri {
+        return Uri.file(this.resourcePath);
+    }
+
+    /**
+     * Converts the present object to a TreeItem.
+     * @returns A TreeItem object
+     */
+    toTreeItem(): TreeItem {
+        let item: TreeItem = new TreeItem('Undefined', TreeItemCollapsibleState.None);
+        item = new TreeItem(this.label, TreeItemCollapsibleState.None);
+        item.label = this.label;
+        item.resourceUri = this.resourceUri;
+        item.iconPath = ThemeIcon.Folder;
+        item.tooltip = this.resourcePath;
+        item.command = {
+            command: 'fav.context.openResource',
+            arguments: [this],
+            title: 'Open Favorite'
+        };
+        item.description = `[ ${this.filter} ]`;
+        return item;
+    }
+
+    /**
+     * @see Bookmarkable
+     */
+    toJSON(key: any) {
+        return { label: this.label, filter: this.filter, resourcePath: this.resourcePath };
+    }
+
+    /**
+     * @see Bookmarkable
+     */
+    activate(): void {
+        let matches = glob.sync(this.filter, { cwd: this.resourceUri.fsPath, nodir: true, absolute: true });
+        matches.forEach(entry => vscode.window.showTextDocument(vscode.Uri.file(entry), { preview: false }));
     }
 }
 

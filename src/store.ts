@@ -1,6 +1,6 @@
 import { chdir } from 'process';
 import * as vscode from 'vscode';
-import { Bookmarkable, bookmarkableComparator, Favorite, Group } from './model';
+import { Bookmarkable, bookmarkableComparator, Favorite, Folder, Group } from './model';
 
 export type OnStoreLoadedHandler = () => void;
 
@@ -80,7 +80,9 @@ export class FavoriteStore {
         if (Group.isGroup(obj)) {
             bk = Object.assign(new Group(), obj);
             (bk as Group).children = obj.children.map((child: any) => this.restore(child, bk));
-        } else {
+        } else if((obj as Folder).filter !== undefined) {
+            bk = Object.assign(new Folder(), obj);
+        }else{
             bk = Object.assign(new Favorite(), obj);
         }
         if (parent) {

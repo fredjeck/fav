@@ -32,10 +32,6 @@
   "contributes": {
     "commands": [
       {
-        "command": "fav.palette.favoriteActiveFile",
-        "title": "Favorites: Add active file to favorites"
-      },
-      {
         "command": "fav.palette.edit",
         "title": "Favorites: Edit favorites.json"
       },
@@ -48,6 +44,10 @@
         "title": "Favorites: Add active file to favorites group"
       },
       {
+        "command": "fav.palette.favoriteActiveFile",
+        "title": "Favorites: Add active file to favorites"
+      },
+      {
         "command": "fav.palette.openFavorite",
         "title": "Favorites: Open favorite"
       },
@@ -58,6 +58,10 @@
       {
         "command": "fav.palette.openGroup",
         "title": "Favorites: Open favorites group"
+      },
+      {
+        "command": "fav.palette.favoriteFolder",
+        "title": "Favorites : Add folder to favorites..."
       },
       {
         "command": "fav.view.createGroup",
@@ -82,6 +86,14 @@
       {
         "command": "fav.menu.favoriteActiveFile",
         "title": "Add to favorites"
+      },
+      {
+        "command": "fav.menu.favoriteActiveFolder",
+        "title": "Add to favorites"
+      },
+      {
+        "command": "fav.menu.favoriteActiveFolderToGroup",
+        "title": "Add to favorites group"
       },
       {
         "command": "fav.menu.favoriteActiveFileToGroup",
@@ -143,6 +155,9 @@
           "command": "fav.palette.openGroup"
         },
         {
+          "command": "fav.palette.favoriteFolder"
+        },
+        {
           "command": "fav.context.openResource",
           "when": "false"
         },
@@ -157,6 +172,14 @@
         {
           "command": "fav.menu.favoriteActiveFile",
           "when": "false"
+        },
+        {
+          "command": "fav.menu.favoriteActiveFolder",
+          "when": "false"
+        },
+        {
+          "command": "fav.menu.favoriteActiveFolderToGroup",
+          "when": "false"
         }
       ],
       "explorer/context": [
@@ -169,6 +192,16 @@
           "command": "fav.menu.favoriteActiveFileToGroup",
           "group": "commands",
           "when": "resource && !explorerResourceIsFolder"
+        },
+        {
+          "command": "fav.menu.favoriteActiveFolder",
+          "group": "commands",
+          "when": "resource && explorerResourceIsFolder"
+        },
+        {
+          "command": "fav.menu.favoriteActiveFolderToGroup",
+          "group": "commands",
+          "when": "resource && explorerResourceIsFolder"
         }
       ],
       "view/item/context": [
