@@ -1,5 +1,10 @@
 # Change Log
 
+# 1.5.0
+- Added support for folder based favorites (including file filters with glob support)
+- Quality of life improvements
+- Code cleanup and refactoring
+
 # 1.4.0
 - The group picker now displays the group's path in the hierarchy
 
