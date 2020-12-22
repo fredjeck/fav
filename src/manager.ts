@@ -6,31 +6,6 @@ import { FavoritesTreeDataProvider } from './tree';
 import { Utils } from './utils';
 
 /**
- * Registry of all enabled commands.
- */
-export enum Commands {
-    PaletteFavoriteActiveFile = 'fav.palette.favoriteActiveFile',
-    PaletteFavoriteActiveFileToGroup = 'fav.palette.favoriteActiveFileToGroup',
-    PaletteEdit = 'fav.palette.edit',
-    PaletteReload = 'fav.palette.reload',
-    PaletteFavoriteOpen = 'fav.palette.openFavorite',
-    PaletteGroupCreate = 'fav.palette.createGroup',
-    PaletteGroupOpen = 'fav.palette.openGroup',
-    PaletteFavoriteFolder = 'fav.palette.favoriteFolder',
-    ViewGroupCreate = 'fav.view.createGroup',
-    ContextFavoriteMove = 'fav.context.moveFavorite',
-    ContextFavoriteRemove = 'fav.context.removeFavorite',
-    ContextFavoriteRename = 'fav.context.renameFavorite',
-    ContextResourceOpen = 'fav.context.openResource',
-    ContextCreateGroup = 'fav.context.createGroup',
-    ContextGroupOpen = 'fav.context.openGroup',
-    MenuFavoriteActiveFile = 'fav.menu.favoriteActiveFile',
-    MenuFavoriteActiveFileToGroup = 'fav.menu.favoriteActiveFileToGroup',
-    MenuFavoriteActiveFolder = 'fav.menu.favoriteActiveFolder',
-    MenuFavoriteActiveFolderToGroup = 'fav.menu.favoriteActiveFolderToGroup',
-}
-
-/**
  * Core Extension component.
  */
 export class FavoriteManager {
@@ -95,13 +70,17 @@ export class FavoriteManager {
         }
     }
 
+    /**
+     * Gathers all the necessary information to create a new favorite
+     * @param node The element to favorite
+     */
     private async createFavorite(node: any): Promise<Bookmarkable | undefined> {
         let path = this.selectedElementPath(node);
         if (!path) {
             return undefined;
         }
 
-        let label = await vscode.window.showInputBox({ prompt: 'Label', value: Utils.fileName(path as string) });
+        let label = await vscode.window.showInputBox({ prompt: 'Name of your new favorite (as shown in the Fav:Explorer view)', value: Utils.fileName(path as string) });
         if (!label) { return undefined; }
 
         let fav = new Favorite();
@@ -111,21 +90,25 @@ export class FavoriteManager {
         return fav;
     }
 
+    /**
+     * Gathers all the necessary information to create a new folder
+     * @param node The element to favorite
+     */
     private async createFolder(node: any): Promise<Bookmarkable | undefined> {
         let path = this.selectedElementPath(node);
-        if (!path) {
-            var uris = await vscode.window.showOpenDialog({ canSelectFiles: false, canSelectFolders: true, title: 'Please select the folder to favorite' });
+        if (!path || !node) {
+            var uris = await vscode.window.showOpenDialog({ canSelectFiles: false, canSelectFolders: true, title: 'Please select the folder add to your favorites' });
             if (!uris) {
                 return undefined;
             }
             path = uris[0].fsPath;
         }
 
-        let label = await vscode.window.showInputBox({ prompt: 'Label', value: Utils.fileName(path as string) });
+        let label = await vscode.window.showInputBox({ prompt: 'Name of your new favorite (as shown in the Fav:Explorer view)', value: Utils.fileName(path as string) });
         if (!label) { return undefined; }
 
-        let filter = await vscode.window.showInputBox({ prompt: 'File filter (you can use glob patterns) - only matches files', value: Folder.DefaultFileFiter }) || Folder.DefaultFileFiter;
-        if (!label) { return undefined; }
+        let filter = await vscode.window.showInputBox({ prompt: 'File filter (glob patterns are supported) - only matches files', value: Folder.DefaultFileFiter }) || Folder.DefaultFileFiter;
+        if (!filter) { return undefined; }
 
         let fav = new Folder();
         fav.label = label;
@@ -135,79 +118,14 @@ export class FavoriteManager {
         return fav;
     }
 
-    /**
-     * Adds the selected GUI element to the Favorites list (top level).
-     * @param node An element selected in the GUI.
-     */
-    async favoriteActiveFile(node: any): Promise<void> {
-        let path = this.selectedElementPath(node);
-        if (!path) {
-            return;
-        }
+    private async changeFileFilter(node:Folder):Promise<void>{
+        let filter = await vscode.window.showInputBox({ prompt: 'File filter (glob patterns are supported) - only matches files', value: node.filter }) || Folder.DefaultFileFiter;
+        if (!filter) { return; }
 
-        let label = await vscode.window.showInputBox({ prompt: 'Label', value: Utils.fileName(path as string) });
-        if (!label) { return; }
-
-        let fav = new Favorite();
-        fav.label = label;
-        fav.resourcePath = path || '';
-
-        this._store.add(fav);
-        this._provider.refresh();
-        this._treeView.reveal(fav, { select: true, focus: true });
-    }
-
-    async favoriteActiveFolder(node: any): Promise<void> {
-        let path = this.selectedElementPath(node);
-        if (!path) {
-            var uris = await vscode.window.showOpenDialog({ canSelectFiles: false, canSelectFolders: true, title: 'Please select the folder to favorite' });
-            if (!uris) {
-                return;
-            }
-            path = uris[0].fsPath;
-        }
-
-        let label = await vscode.window.showInputBox({ prompt: 'Label', value: Utils.fileName(path as string) });
-        if (!label) { return; }
-
-        let filter = await vscode.window.showInputBox({ prompt: 'File filter (you can use glob patterns) - only matches files', value: Folder.DefaultFileFiter }) || Folder.DefaultFileFiter;
-        if (!label) { return; }
-
-        let fav = new Folder();
-        fav.label = label;
-        fav.resourcePath = path || '';
-        fav.filter = filter;
-
-        this._store.add(fav);
-        this._provider.refresh();
-        this._treeView.reveal(fav, { select: true, focus: true });
-    }
-
-    /**
-     * Adds the selected GUI element to the Favorites list under the selected group.
-     * Prompts the user via QuickPick for the group to add the Favorite to.
-     * @param node An element selected in the GUI.
-     */
-    async favoriteActiveFileToGroup(node: any): Promise<void> {
-        let path = this.selectedElementPath(node);
-        if (!path) {
-            return;
-        }
-
-        let group = await this.promptGroupSelection();
-        if (group) {
-            let label = await vscode.window.showInputBox({ prompt: 'Label', value: Utils.fileName(path as string) });
-            if (!label) { return; }
-
-            let fav = new Favorite();
-            fav.label = label;
-            fav.resourcePath = path || '';
-
-            group?.addChild(fav);
-            this._store.update(group);
-            this._provider.refresh(group);
-            this._treeView.reveal(fav);
-        }
+        node.filter = filter;
+        this._store.update(node);
+        this._provider.refresh(node);
+        this._treeView.reveal(node, { select: true, focus: true });
     }
 
     /**
@@ -256,7 +174,7 @@ export class FavoriteManager {
      * Adds a new group to the favorites bar.
      */
     async createGroup(parent?: Group): Promise<void> {
-        let label = await vscode.window.showInputBox({ prompt: 'New favorite group name :', value: 'New group' });
+        let label = await vscode.window.showInputBox({ prompt: 'Name of your new group (as shown in the Fav:Explorer view) :', value: 'New group' });
         if (!label) { return; }
 
         let group = new Group();
@@ -338,26 +256,32 @@ export class FavoriteManager {
      * Register the extension's commands.
      * @param context The extension's context
      */
-    registerCommands(context: vscode.ExtensionContext): void {
-        context.subscriptions.push(vscode.commands.registerCommand(Commands.PaletteFavoriteActiveFile, (node) => this.addToFavorites(node, BookmarkableKind.Favorite, false), this));
-        context.subscriptions.push(vscode.commands.registerCommand(Commands.MenuFavoriteActiveFile, (node, a, b) => this.addToFavorites(node, BookmarkableKind.Favorite, false), this));
-        context.subscriptions.push(vscode.commands.registerCommand(Commands.MenuFavoriteActiveFolder, (node) => this.addToFavorites(node, BookmarkableKind.Folder, false), this));
-        context.subscriptions.push(vscode.commands.registerCommand(Commands.PaletteEdit, this.editFavorites, this));
-        context.subscriptions.push(vscode.commands.registerCommand(Commands.PaletteReload, this.reloadFavorites, this));
-        context.subscriptions.push(vscode.commands.registerCommand(Commands.PaletteFavoriteActiveFileToGroup, (node) => this.addToFavorites(node, BookmarkableKind.Favorite, true), this));
-        context.subscriptions.push(vscode.commands.registerCommand(Commands.MenuFavoriteActiveFileToGroup, (node) => this.addToFavorites(node, BookmarkableKind.Favorite, true), this));
-        context.subscriptions.push(vscode.commands.registerCommand(Commands.PaletteFavoriteOpen, this.openFavorite, this));
-        context.subscriptions.push(vscode.commands.registerCommand(Commands.MenuFavoriteActiveFolderToGroup, (node) => this.addToFavorites(node, BookmarkableKind.Folder, true), this));
-        context.subscriptions.push(vscode.commands.registerCommand(Commands.PaletteFavoriteFolder, (node) => this.addToFavorites(node, BookmarkableKind.Folder, false), this));
-        context.subscriptions.push(vscode.commands.registerCommand(Commands.PaletteGroupCreate, this.createGroup, this));
-        context.subscriptions.push(vscode.commands.registerCommand(Commands.PaletteGroupOpen, this.openGroup, this));
-        context.subscriptions.push(vscode.commands.registerCommand(Commands.ViewGroupCreate, this.createGroup, this));
-        context.subscriptions.push(vscode.commands.registerCommand(Commands.ContextFavoriteRemove, this.removeFavorite, this));
-        context.subscriptions.push(vscode.commands.registerCommand(Commands.ContextFavoriteRename, this.renameFavorite, this));
-        context.subscriptions.push(vscode.commands.registerCommand(Commands.ContextFavoriteMove, this.moveFavorite, this));
-        context.subscriptions.push(vscode.commands.registerCommand(Commands.ContextGroupOpen, this.openGroup, this));
-        context.subscriptions.push(vscode.commands.registerCommand(Commands.ContextCreateGroup, this.createGroup, this));
-        context.subscriptions.push(vscode.commands.registerCommand(Commands.ContextResourceOpen, this.openResource, this));
+    private registerCommands(context: vscode.ExtensionContext): void {
+        // File explorer menu
+        context.subscriptions.push(vscode.commands.registerCommand('fav.menu.favoriteActiveFile', (node) => this.addToFavorites(node, BookmarkableKind.Favorite, false), this));
+        context.subscriptions.push(vscode.commands.registerCommand('fav.menu.favoriteActiveFolder', (node) => this.addToFavorites(node, BookmarkableKind.Folder, false), this));
+        context.subscriptions.push(vscode.commands.registerCommand('fav.menu.favoriteActiveFileToGroup', (node) => this.addToFavorites(node, BookmarkableKind.Favorite, true), this));
+        context.subscriptions.push(vscode.commands.registerCommand('fav.menu.favoriteActiveFolderToGroup', (node) => this.addToFavorites(node, BookmarkableKind.Folder, true), this));
+
+        // Command palette
+        context.subscriptions.push(vscode.commands.registerCommand('fav.palette.favoriteActiveFile', (node) => this.addToFavorites(node, BookmarkableKind.Favorite, false), this));
+        context.subscriptions.push(vscode.commands.registerCommand('fav.palette.favoriteActiveFileToGroup', (node) => this.addToFavorites(node, BookmarkableKind.Favorite, true), this));
+        context.subscriptions.push(vscode.commands.registerCommand('fav.palette.favoriteFolder', (node) => this.addToFavorites(undefined, BookmarkableKind.Folder, false), this));
+        context.subscriptions.push(vscode.commands.registerCommand('fav.palette.edit', this.editFavorites, this));
+        context.subscriptions.push(vscode.commands.registerCommand('fav.palette.reload', this.reloadFavorites, this));
+        context.subscriptions.push(vscode.commands.registerCommand('fav.palette.openFavorite', this.openFavorite, this));
+        context.subscriptions.push(vscode.commands.registerCommand('fav.palette.createGroup', this.createGroup, this));
+        context.subscriptions.push(vscode.commands.registerCommand('fav.palette.openGroup', this.openGroup, this));
+
+        // Contextual actions triggered from the favorites bar
+        context.subscriptions.push(vscode.commands.registerCommand('fav.view.createGroup', this.createGroup, this));
+        context.subscriptions.push(vscode.commands.registerCommand('fav.context.removeFavorite', this.removeFavorite, this));
+        context.subscriptions.push(vscode.commands.registerCommand('fav.context.renameFavorite', this.renameFavorite, this));
+        context.subscriptions.push(vscode.commands.registerCommand('fav.context.moveFavorite', this.moveFavorite, this));
+        context.subscriptions.push(vscode.commands.registerCommand('fav.context.openGroup', this.openGroup, this));
+        context.subscriptions.push(vscode.commands.registerCommand('fav.context.createGroup', this.createGroup, this));
+        context.subscriptions.push(vscode.commands.registerCommand('fav.context.openResource', this.openResource, this));
+        context.subscriptions.push(vscode.commands.registerCommand('fav.context.changeFileFilter', this.changeFileFilter, this));
     }
 
     /**
@@ -385,6 +309,6 @@ export class FavoriteManager {
             return undefined;
         }
 
-        return vscode.window.showQuickPick(this._store.groups().filter(f => !exclusions.find(x => x === f)));
+        return vscode.window.showQuickPick(this._store.groups().filter(f => !exclusions.find(x => x === f)),{placeHolder:'Please select a favorites group'});
     }
 }

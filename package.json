@@ -33,35 +33,35 @@
     "commands": [
       {
         "command": "fav.palette.edit",
-        "title": "Favorites: Edit favorites.json"
+        "title": "Fav: Edit favorites.json"
       },
       {
         "command": "fav.palette.reload",
-        "title": "Favorites: Reload favorites"
+        "title": "Fav: Reload favorites"
       },
       {
         "command": "fav.palette.favoriteActiveFileToGroup",
-        "title": "Favorites: Add active file to favorites group"
+        "title": "Fav: Add active file to favorites group"
       },
       {
         "command": "fav.palette.favoriteActiveFile",
-        "title": "Favorites: Add active file to favorites"
+        "title": "Fav: Add active file to favorites"
       },
       {
         "command": "fav.palette.openFavorite",
-        "title": "Favorites: Open favorite"
+        "title": "Fav: Open favorite"
       },
       {
         "command": "fav.palette.createGroup",
-        "title": "Favorites: Create new group"
+        "title": "Fav: Create new group"
       },
       {
         "command": "fav.palette.openGroup",
-        "title": "Favorites: Open favorites group"
+        "title": "Fav: Open favorites group"
       },
       {
         "command": "fav.palette.favoriteFolder",
-        "title": "Favorites : Add folder to favorites..."
+        "title": "Fav : Add folder to favorites..."
       },
       {
         "command": "fav.view.createGroup",
@@ -84,22 +84,6 @@
         "title": "Move to..."
       },
       {
-        "command": "fav.menu.favoriteActiveFile",
-        "title": "Add to favorites"
-      },
-      {
-        "command": "fav.menu.favoriteActiveFolder",
-        "title": "Add to favorites"
-      },
-      {
-        "command": "fav.menu.favoriteActiveFolderToGroup",
-        "title": "Add to favorites group"
-      },
-      {
-        "command": "fav.menu.favoriteActiveFileToGroup",
-        "title": "Add to favorites group"
-      },
-      {
         "command": "fav.context.openGroup",
         "title": "Open favorites group",
         "icon": {
@@ -114,24 +98,44 @@
       {
         "command": "fav.context.createGroup",
         "title": "Create group"
+      },
+      {
+        "command": "fav.context.changeFileFilter",
+        "title": "Change file filter"
+      },
+      {
+        "command": "fav.menu.favoriteActiveFile",
+        "title": "Fav: Add to favorites"
+      },
+      {
+        "command": "fav.menu.favoriteActiveFolder",
+        "title": "Fav: Add to favorites"
+      },
+      {
+        "command": "fav.menu.favoriteActiveFolderToGroup",
+        "title": "Fav: Add to favorites group"
+      },
+      {
+        "command": "fav.menu.favoriteActiveFileToGroup",
+        "title": "Fav: Add to favorites group"
       }
     ],
     "viewsContainers": {
       "activitybar": [
         {
-          "id": "favorites-explorer",
-          "title": "Favorites",
+          "id": "fav-explorer",
+          "title": "Fav",
           "icon": "resources/bookmark.svg"
         }
       ]
     },
     "views": {
-      "favorites-explorer": [
+      "fav-explorer": [
         {
           "id": "favorites",
-          "name": "Favorites",
+          "name": "Explorer",
           "icon": "resources/bookmark.svg",
-          "contextualTitle": "Favorites Explorer"
+          "contextualTitle": "Fav Explorer"
         }
       ]
     },
@@ -163,6 +167,10 @@
         },
         {
           "command": "fav.context.openGroup",
+          "when": "false"
+        },
+        {
+          "command": "fav.context.changeFileFilter",
           "when": "false"
         },
         {
@@ -222,6 +230,10 @@
         {
           "command": "fav.context.createGroup",
           "when": "viewItem == group || viewItem == group-empty"
+        },
+        {
+          "command": "fav.context.changeFileFilter",
+          "when": "viewItem == folder"
         }
       ],
       "view/title": [

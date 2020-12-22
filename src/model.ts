@@ -176,7 +176,7 @@ export class Group extends Bookmark {
      * @see Bookmarkable
      */
     activate(): void {
-        this.favoritesDeep().forEach(f => vscode.window.showTextDocument(f.resourceUri, { preview: false }));
+        this.favoritesDeep().forEach(f => f.activate());
     }
 }
 
@@ -279,6 +279,7 @@ export class Folder extends Bookmark {
             title: 'Open Favorite'
         };
         item.description = `[ ${this.filter} ]`;
+        item.contextValue = 'folder';
         return item;
     }
 
