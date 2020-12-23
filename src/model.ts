@@ -252,7 +252,7 @@ export class Folder extends Bookmark {
      * @see QuickPickItem.detail
      */
     get detail(): string | undefined {
-        return this.label !== this.resourcePath ? this.resourcePath : undefined;
+        return `${this.label !== this.resourcePath ? this.resourcePath : ''} [ ${this.filter} ]`;
     }
 
     /**
