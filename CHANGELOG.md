@@ -1,5 +1,8 @@
 # Change Log
 
+# 1.5.1
+- Hotifx : Missing dependency caused the extension to crash
+
 # 1.5.0
 - Added support for folder based favorites (including file filters with glob support)
 - Quality of life improvements
