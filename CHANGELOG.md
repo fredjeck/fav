@@ -1,5 +1,9 @@
 # Change Log
 
+# 1.5.2
+- Hotifx : Missing dependency caused the extension to crash round 2
+- Moved build to webpack
+
 # 1.5.1
 - Hotifx : Missing dependency caused the extension to crash
 
