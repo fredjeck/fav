@@ -1,5 +1,8 @@
 # Change Log
 
+# 1.5.3
+- Fixed Bug #17 wwhich caused context actions to leak into other views
+
 # 1.5.2
 - Hotifx : Missing dependency caused the extension to crash round 2
 - Moved build to webpack
