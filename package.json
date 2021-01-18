@@ -132,7 +132,7 @@
     "views": {
       "fav-explorer": [
         {
-          "id": "favorites",
+          "id": "fav-favorites",
           "name": "Explorer",
           "icon": "resources/bookmark.svg",
           "contextualTitle": "Fav Explorer"
@@ -214,32 +214,40 @@
       ],
       "view/item/context": [
         {
-          "command": "fav.context.renameFavorite"
+          "command": "fav.context.renameFavorite",
+          "when": "view == fav-favorites"
         },
         {
-          "command": "fav.context.removeFavorite"
+          "command": "fav.context.removeFavorite",
+          "when": "view == fav-favorites"
         },
         {
-          "command": "fav.context.moveFavorite"
+          "command": "fav.context.moveFavorite",
+          "when": "view == fav-favorites"
         },
         {
           "command": "fav.context.openGroup",
           "group": "inline",
-          "when": "viewItem == group"
+          "when": "view == fav-favorites && viewItem == group"
         },
         {
           "command": "fav.context.createGroup",
-          "when": "viewItem == group || viewItem == group-empty"
+          "when": "view == fav-favorites && viewItem == group"
+        },
+        {
+          "command": "fav.context.createGroup",
+          "when": "view == fav-favorites && viewItem == group-empty"
         },
         {
           "command": "fav.context.changeFileFilter",
-          "when": "viewItem == folder"
+          "when": "view == fav-favorites && viewItem == folder"
         }
       ],
       "view/title": [
         {
           "command": "fav.view.createGroup",
-          "group": "navigation"
+          "group": "navigation",
+          "when": "view == fav-favorites"
         }
       ]
     }

@@ -19,7 +19,7 @@ export class FavoriteManager {
 
         this._provider = new FavoritesTreeDataProvider(this._store);
 
-        this._treeView = vscode.window.createTreeView('favorites', {
+        this._treeView = vscode.window.createTreeView('fav-favorites', {
             treeDataProvider: this._provider,
             canSelectMany: false
         });
