@@ -1,6 +1,6 @@
 import { create } from 'domain';
 import * as vscode from 'vscode';
-import { Bookmarkable, BookmarkableKind, bookmarkableLabelComparator, Favorite, Folder, Group } from './model';
+import { Bookmarkable, BookmarkableKind, bookmarkableLabelComparator, Favorite, Folder, Group, RootGroup } from './model';
 import { FavoriteStore } from './store';
 import { FavoritesTreeDataProvider } from './tree';
 import { Utils } from './utils';
@@ -60,7 +60,7 @@ export class FavoriteManager {
             this._provider.refresh();
             this._treeView.reveal(fav, { select: true, focus: true });
         } else {
-            let group = await this.promptGroupSelection();
+            let group = await this.promptGroupSelection(false);
             if (group) {
                 group?.addChild(fav);
                 this._store.update(group);
@@ -164,7 +164,7 @@ export class FavoriteManager {
      */
     async openGroup(group?: Group): Promise<void> {
         if (!group) {
-            group = await this.promptGroupSelection();
+            group = await this.promptGroupSelection(false);
         }
 
         group?.activate();
@@ -212,7 +212,7 @@ export class FavoriteManager {
         if (!favorite) {
             return;
         }
-        let group = await this.promptGroupSelection(favorite.parent);
+        let group = await this.promptGroupSelection(true, favorite.parent ?? RootGroup);
         if (group) {
             if (favorite.parent) {
                 (favorite as Group).parent?.removeChild(favorite);
@@ -220,8 +220,12 @@ export class FavoriteManager {
                 // Top level Favorite
                 this._store.delete(favorite);
             }
-
-            group.addChild(favorite);
+            if(group === RootGroup){
+                this._store.add(favorite);
+            }else{
+                group.addChild(favorite);
+            }
+            
             this._store.update();
             this._provider.refresh();
             this._treeView.reveal(favorite);
@@ -301,14 +305,14 @@ export class FavoriteManager {
     /**
      * Opens a quickpick and prompts the user to select a Favorite group.
      */
-    private async promptGroupSelection(...exclusions: (Bookmarkable | undefined)[]): Promise<Group | undefined> {
-
-        let groups = this._store.groups();
+    private async promptGroupSelection(showRoot:boolean, ...exclusions: (Bookmarkable | undefined)[]): Promise<Group | undefined> {
+        var root = showRoot ? [RootGroup] : [];
+        let groups = root.concat(this._store.groups());
         if (!groups || groups.length === 0) {
             vscode.window.showWarningMessage('No favorite groups found, please define a group first');
             return undefined;
         }
 
-        return vscode.window.showQuickPick(this._store.groups().filter(f => !exclusions.find(x => x === f)),{placeHolder:'Please select a favorites group'});
+        return vscode.window.showQuickPick(groups.filter(f => !exclusions.find(x => x === f)),{placeHolder:'Please select a favorites group'});
     }
 }

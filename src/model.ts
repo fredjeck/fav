@@ -181,6 +181,12 @@ export class Group extends Bookmark {
 }
 
 /**
+ * Root Group represents the top level element of the tree structure.
+ */
+export const RootGroup = new Group();
+RootGroup.label = '-- root';
+
+/**
  * A Bookmarkable object which points to a file system resource.
  */
 export class Favorite extends Bookmark {
