@@ -1,5 +1,8 @@
 # Change Log
 
+# 1.6.0
+- It is now possible to move groups and favorites back to the top level/root element using the element picker
+
 # 1.5.3
 - Fixed Bug #17 wwhich caused context actions to leak into other views
 
