@@ -1,6 +1,6 @@
 # Change Log
 
-# 1.6.0
+# 1.6.1
 - It is now possible to move groups and favorites back to the top level/root element using the element picker
 
 # 1.5.3
