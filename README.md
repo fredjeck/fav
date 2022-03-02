@@ -3,8 +3,8 @@
 Fav is compact and handy extension which lets you bookmark/favorite and organize files you often use and keep them at a keyboard shortcut's reach independently from any loaded workspace.
 Fav has no external dependencies and only relies on the basic VSCode API.
 
-## New in 1.6.1
-- Elements can now be moved back to the top level view using the element picker
+## New in 1.6.3
+- Favorite folders is now using a new icon
 
 ## Features
 

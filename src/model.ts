@@ -277,7 +277,7 @@ export class Folder extends Bookmark {
         item = new TreeItem(this.label, TreeItemCollapsibleState.None);
         item.label = this.label;
         item.resourceUri = this.resourceUri;
-        item.iconPath = ThemeIcon.Folder;
+        item.iconPath = new ThemeIcon('files');
         item.tooltip = this.resourcePath;
         item.command = {
             command: 'fav.context.openResource',
