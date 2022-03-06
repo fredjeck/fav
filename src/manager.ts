@@ -205,6 +205,15 @@ export class FavoriteManager {
     }
 
     /**
+     * Utility function to open a URI in a new Window.
+     * @param resource A resource URI
+     */
+     async openInNewWindow(favorite: Bookmarkable): Promise<void> {
+        if(favorite instanceof Group){return;}
+        await vscode.commands.executeCommand('vscode.openFolder', favorite.location()[0], {forceNewWindow:true});
+    }
+
+    /**
      * Prompts the user for a group to move the favorite to.
      * @param favorite The favorite to move to another group
      */
@@ -286,6 +295,8 @@ export class FavoriteManager {
         context.subscriptions.push(vscode.commands.registerCommand('fav.context.createGroup', this.createGroup, this));
         context.subscriptions.push(vscode.commands.registerCommand('fav.context.openResource', this.openResource, this));
         context.subscriptions.push(vscode.commands.registerCommand('fav.context.changeFileFilter', this.changeFileFilter, this));
+        context.subscriptions.push(vscode.commands.registerCommand('fav.context.openInNewWindow', this.openInNewWindow, this));
+
     }
 
     /**

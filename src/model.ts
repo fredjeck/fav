@@ -43,6 +43,11 @@ export interface Bookmarkable {
      * Triggers the action linked to the favorite type.
      */
     activate(): void;
+
+    /**
+     * @returns the location of the underlying favorites.
+     */
+    location(): vscode.Uri[]
 }
 
 /**
@@ -66,6 +71,11 @@ export abstract class Bookmark implements Bookmarkable {
      * @see Bookmarkable
      */
     abstract activate(): void;
+
+    /**
+     * @see Bookmarkable
+     */
+     abstract location(): vscode.Uri[];
 
     /**
      * Compares the present Bookmarkable to the provided one.
@@ -178,6 +188,13 @@ export class Group extends Bookmark {
     activate(): void {
         this.favoritesDeep().forEach(f => f.activate());
     }
+
+    /**
+     * @see Bookmarkable
+     */
+     location(): vscode.Uri[] {
+        return this.favoritesDeep().flatMap(f => f.location());
+    }
 }
 
 /**
@@ -239,6 +256,10 @@ export class Favorite extends Bookmark {
      */
     activate(): void {
         vscode.window.showTextDocument(this.resourceUri, { preview: false });
+    }
+
+    location():vscode.Uri[]{
+        return [this.resourceUri];
     }
 }
 
@@ -302,6 +323,14 @@ export class Folder extends Bookmark {
     activate(): void {
         let matches = glob.sync(this.filter, { cwd: this.resourceUri.fsPath, nodir: true, absolute: true });
         matches.forEach(entry => vscode.window.showTextDocument(vscode.Uri.file(entry), { preview: false }));
+    }
+
+    location(): vscode.Uri[]{
+        return [this.resourceUri];
+        //var uri = Uri.parse(`vscode://fredjeck.fav/${this.resourceUri}?f=${this.filter}`);
+        //return [uri];
+        //let matches = glob.sync(this.filter, { cwd: this.resourceUri.fsPath, nodir: true, absolute: true });
+        //return matches.map(m=>vscode.Uri.file(m));
     }
 }
 

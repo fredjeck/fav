@@ -104,6 +104,10 @@
         "title": "Change file filter"
       },
       {
+        "command": "fav.context.openInNewWindow",
+        "title": "Open in new window"
+      },
+      {
         "command": "fav.menu.favoriteActiveFile",
         "title": "Fav: Add to favorites"
       },
@@ -170,6 +174,10 @@
           "when": "false"
         },
         {
+          "command": "fav.context.openInNewWindow",
+          "when": "false"
+        },
+        {
           "command": "fav.context.changeFileFilter",
           "when": "false"
         },
@@ -213,6 +221,10 @@
         }
       ],
       "view/item/context": [
+        {
+          "command": "fav.context.openInNewWindow",
+          "when": "view == fav-favorites && viewItem != group"
+        },
         {
           "command": "fav.context.renameFavorite",
           "when": "view == fav-favorites"
