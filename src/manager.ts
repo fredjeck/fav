@@ -1,4 +1,6 @@
 import { create } from 'domain';
+import {glob} from 'glob';
+import { URLSearchParams } from 'url';
 import * as vscode from 'vscode';
 import { Bookmarkable, BookmarkableKind, bookmarkableLabelComparator, Favorite, Folder, Group, RootGroup } from './model';
 import { FavoriteStore } from './store';
@@ -26,11 +28,19 @@ export class FavoriteManager {
 
         this.registerCommands(context);
 
-
         vscode.workspace.onDidSaveTextDocument(document => {
             // If the user saves the favorites.json file, we reserve some special treatment
             if (document.uri.fsPath === this._store.storeUri.fsPath) {
                 this.reloadFavorites();
+            }
+        });
+
+        this._store.loadResorationPoint().then(uris =>{
+            if(uris && uris.length>0){
+                uris.forEach(uri=>{
+                    console.log(uri);
+                    vscode.window.showTextDocument(uri, { preview: false });
+                });
             }
         });
     }
@@ -214,6 +224,17 @@ export class FavoriteManager {
     }
 
     /**
+     * Open a folder files in a new window.
+     * @param resource A resource URI
+     */
+     async openFilesInNewWindow(favorite: Folder): Promise<void> {
+        let matches = glob.sync(favorite.filter, { cwd: favorite.resourceUri.fsPath, nodir: true, absolute: true });
+        let uris = matches.map(m=>vscode.Uri.file(m));
+        this._store.createRestorationPoint(uris);
+        await vscode.commands.executeCommand('vscode.openFolder', uris[0], {forceNewWindow:true});
+    }
+
+    /**
      * Prompts the user for a group to move the favorite to.
      * @param favorite The favorite to move to another group
      */
@@ -296,6 +317,7 @@ export class FavoriteManager {
         context.subscriptions.push(vscode.commands.registerCommand('fav.context.openResource', this.openResource, this));
         context.subscriptions.push(vscode.commands.registerCommand('fav.context.changeFileFilter', this.changeFileFilter, this));
         context.subscriptions.push(vscode.commands.registerCommand('fav.context.openInNewWindow', this.openInNewWindow, this));
+        context.subscriptions.push(vscode.commands.registerCommand('fav.context.openFilesInNewWindow', this.openFilesInNewWindow, this));
 
     }
 

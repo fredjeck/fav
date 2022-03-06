@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { ThemeIcon, TreeItem, TreeItemCollapsibleState, Uri } from 'vscode';
 import { sep } from 'path';
-import { glob, Glob } from 'glob';
+import { glob } from 'glob';
 
 export enum BookmarkableKind{
     Group,
@@ -327,10 +327,6 @@ export class Folder extends Bookmark {
 
     location(): vscode.Uri[]{
         return [this.resourceUri];
-        //var uri = Uri.parse(`vscode://fredjeck.fav/${this.resourceUri}?f=${this.filter}`);
-        //return [uri];
-        //let matches = glob.sync(this.filter, { cwd: this.resourceUri.fsPath, nodir: true, absolute: true });
-        //return matches.map(m=>vscode.Uri.file(m));
     }
 }
 

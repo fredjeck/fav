@@ -12,7 +12,6 @@ export class FavoriteStore {
      */
     readonly onStoreLoaded: vscode.Event<undefined> = this._onStoreLoaded.event;
 
-
     private _favorites: Bookmarkable[] = []; // In memory collection of Favorites
 
     private _storeUri: vscode.Uri;
@@ -20,6 +19,10 @@ export class FavoriteStore {
         return this._storeUri;
     }
 
+    private _restoreUri: vscode.Uri;
+    get restoreUri(): vscode.Uri {
+        return this._restoreUri;
+    }
 
     private static _instance: FavoriteStore; // Current store instance
     /**
@@ -41,6 +44,7 @@ export class FavoriteStore {
         var globalStorageUri = context.globalStorageUri;
         vscode.workspace.fs.createDirectory(globalStorageUri);
         this._storeUri = vscode.Uri.joinPath(globalStorageUri, 'favorites.json');
+        this._restoreUri = vscode.Uri.joinPath(globalStorageUri, 'restore.json');
         this.onStoreLoaded(loaded);
         this.refresh();
     };
@@ -168,5 +172,28 @@ export class FavoriteStore {
      */
     private persist(): Thenable<void> {
         return vscode.workspace.fs.writeFile(this.storeUri, Buffer.from(JSON.stringify(this._favorites, null, 4)));
+    }
+
+    /**
+     * Creates a restoration point and saves the list of files which will need to be reopened in a new window
+     * @param uris The list of URIs to be opened after the next launch
+     * @returns Nothing special
+     */
+    createRestorationPoint(uris: vscode.Uri[]): Thenable<void>{
+        return vscode.workspace.fs.writeFile(this.restoreUri, Buffer.from(JSON.stringify(uris.map(u=>u.fsPath), null, 4)));
+    }
+
+    /**
+     * Attemps to read the list of files which needs to be reopened.
+     * This feature is used by the Open files in new window command.
+     * @returns The list of files to restore
+     */
+    async loadResorationPoint(): Promise<vscode.Uri[]>{
+        let stat = vscode.workspace.fs.stat(this.restoreUri);
+        if(!stat){return [];}
+
+        const buffer = await vscode.workspace.fs.readFile(this.restoreUri);
+        vscode.workspace.fs.delete(this.restoreUri);
+        return  (JSON.parse(buffer.toString()) as string[])?.map(s=>vscode.Uri.file(s)) || [];
     }
 }
