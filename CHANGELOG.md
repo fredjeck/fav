@@ -1,5 +1,9 @@
 # Change Log
 
+# 1.7.0
+- Favorites files & folders can now be opened in a new VSCode window
+- Favorite folders content can now be opened in a new VSCode window by applying the selected file filter
+
 # 1.6.3
 - Favorite folders is now using a new icon
 
