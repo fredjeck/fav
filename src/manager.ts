@@ -309,6 +309,7 @@ export class FavoriteManager {
 
         // Contextual actions triggered from the favorites bar
         context.subscriptions.push(vscode.commands.registerCommand('fav.view.createGroup', this.createGroup, this));
+        context.subscriptions.push(vscode.commands.registerCommand('fav.view.editFavorites', this.editFavorites, this));
         context.subscriptions.push(vscode.commands.registerCommand('fav.context.removeFavorite', this.removeFavorite, this));
         context.subscriptions.push(vscode.commands.registerCommand('fav.context.renameFavorite', this.renameFavorite, this));
         context.subscriptions.push(vscode.commands.registerCommand('fav.context.moveFavorite', this.moveFavorite, this));

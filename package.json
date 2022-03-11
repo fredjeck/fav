@@ -77,6 +77,14 @@
         }
       },
       {
+        "command": "fav.view.editFavorites",
+        "title": "Edit favorites",
+        "icon": {
+          "light": "resources/light/edit.svg",
+          "dark": "resources/dark/edit.svg"
+        }
+      },
+      {
         "command": "fav.context.renameFavorite",
         "title": "Rename"
       },
@@ -275,6 +283,11 @@
       "view/title": [
         {
           "command": "fav.view.createGroup",
+          "group": "navigation",
+          "when": "view == fav-favorites"
+        },
+        {
+          "command": "fav.view.editFavorites",
           "group": "navigation",
           "when": "view == fav-favorites"
         }
