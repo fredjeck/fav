@@ -268,7 +268,7 @@ export class Favorite extends Bookmark {
  */
 export class Folder extends Bookmark {
 
-    static readonly DefaultFileFiter = '*.*';
+    static readonly DefaultFileFiter = '*';
 
     resourcePath = ''; // Path to the file system resource
     filter = Folder.DefaultFileFiter; // Glob filter

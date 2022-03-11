@@ -117,7 +117,7 @@ export class FavoriteManager {
         let label = await vscode.window.showInputBox({ prompt: 'Name of your new favorite (as shown in the Fav:Explorer view)', value: Utils.fileName(path as string) });
         if (!label) { return undefined; }
 
-        let filter = await vscode.window.showInputBox({ prompt: 'File filter (glob patterns are supported) - only matches files', value: Folder.DefaultFileFiter }) || Folder.DefaultFileFiter;
+        let filter = await vscode.window.showInputBox({ prompt: 'File filter (glob patterns are supported i.e. **, **/*.js, file[1|2])', value: Folder.DefaultFileFiter }) || Folder.DefaultFileFiter;
         if (!filter) { return undefined; }
 
         let fav = new Folder();
@@ -143,7 +143,7 @@ export class FavoriteManager {
      */
     editFavorites(): void {
         vscode.window.showTextDocument(this._store.storeUri, { preview: false, preserveFocus: false });
-        vscode.window.showWarningMessage('Please be careful when manually editing your favorites', 'Understood');
+        vscode.window.showWarningMessage('Please be careful when manually editing your favorites, this might prevent the extension from working properly', 'Understood');
     }
 
     /**
