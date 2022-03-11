@@ -23,7 +23,12 @@
   ],
   "keywords": [
     "favorite",
-    "bookmark"
+    "favorites",
+    "bookmark",
+    "raccourcis",
+    "bookmarks",
+    "shortcuts",
+    "shortcut"
   ],
   "activationEvents": [
     "onStartupFinished"
