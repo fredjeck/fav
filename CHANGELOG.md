@@ -5,6 +5,7 @@
 - Favorite folders content can now be opened in a new VSCode window by applying the selected file filter
 - Improved the favorites folder file filter example glob patterns
 - Added a view shortcut to edit favorites
+- Favorite folders now warns if the selected filter yields no files
 
 # 1.6.3
 - Favorite folders is now using a new icon
