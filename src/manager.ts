@@ -16,6 +16,11 @@ export class FavoriteManager {
     private _store: FavoriteStore; // Underlying storage
     private _provider: FavoritesTreeDataProvider; // Treeview Data provider
 
+    /**
+     * Maximum files allowed to be restored for performances reasons
+     */
+    private static MAX_RESTORED_FILES = 200;
+
     constructor(context: vscode.ExtensionContext) {
         this._store = FavoriteStore.fromContext(context, () => this._provider.refresh());
 
@@ -36,6 +41,12 @@ export class FavoriteManager {
         });
 
         this._store.loadResorationPoint().then(uris =>{
+            if(uris.length>FavoriteManager.MAX_RESTORED_FILES){
+                console.log('limiting');
+                vscode.window.showWarningMessage(`The applied folder filter yielded a huge number of files, for performances reasons, only the first ${FavoriteManager.MAX_RESTORED_FILES} files will be opened`);
+                uris = uris.slice(0,FavoriteManager.MAX_RESTORED_FILES);
+            }
+    
             if(uris && uris.length>0){
                 uris.forEach(uri=>{
                     console.log(uri);
@@ -129,7 +140,7 @@ export class FavoriteManager {
     }
 
     private async changeFileFilter(node:Folder):Promise<void>{
-        let filter = await vscode.window.showInputBox({ prompt: 'File filter (glob patterns are supported) - only matches files', value: node.filter }) || Folder.DefaultFileFiter;
+        let filter = await vscode.window.showInputBox({ prompt: 'File filter (glob patterns are supported i.e. **, **/*.js, file[1|2])', value: node.filter }) || Folder.DefaultFileFiter;
         if (!filter) { return; }
 
         node.filter = filter;
@@ -153,7 +164,7 @@ export class FavoriteManager {
         try {
             await this._store.refresh();
         } catch (err) {
-            vscode.window.showErrorMessage(err.message, 'Ok');
+            vscode.window.showErrorMessage((err as any).message, 'Ok');
         }
     }
 
@@ -229,6 +240,11 @@ export class FavoriteManager {
      */
      async openFilesInNewWindow(favorite: Folder): Promise<void> {
         let matches = glob.sync(favorite.filter, { cwd: favorite.resourceUri.fsPath, nodir: true, absolute: true });
+        if(matches.length===0){
+            vscode.window.showWarningMessage(`'${favorite.resourceUri.fsPath}' : No matching files could be found for the filter '${favorite.filter}', you might need to update your selection criteria.`);
+            return;
+        }
+
         let uris = matches.map(m=>vscode.Uri.file(m));
         this._store.createRestorationPoint(uris);
         await vscode.commands.executeCommand('vscode.openFolder', uris[0], {forceNewWindow:true});

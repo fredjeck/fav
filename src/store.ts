@@ -189,11 +189,13 @@ export class FavoriteStore {
      * @returns The list of files to restore
      */
     async loadResorationPoint(): Promise<vscode.Uri[]>{
-        let stat = vscode.workspace.fs.stat(this.restoreUri);
-        if(!stat){return [];}
+        let stat = await vscode.workspace.fs.stat(this.restoreUri);
+        if(!stat) {return [];}
 
+        // Read and delete the restore point so if something fails, the user is not stuck in an infinite failing loop
         const buffer = await vscode.workspace.fs.readFile(this.restoreUri);
         vscode.workspace.fs.delete(this.restoreUri);
+
         return  (JSON.parse(buffer.toString()) as string[])?.map(s=>vscode.Uri.file(s)) || [];
     }
 }

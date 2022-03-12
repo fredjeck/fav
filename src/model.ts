@@ -322,6 +322,10 @@ export class Folder extends Bookmark {
      */
     activate(): void {
         let matches = glob.sync(this.filter, { cwd: this.resourceUri.fsPath, nodir: true, absolute: true });
+        if(matches.length===0){
+            vscode.window.showWarningMessage(`'${this.resourceUri.fsPath}' : No matching files could be found for the filter '${this.filter}', you might need to update your selection criteria.`);
+            return;
+        }
         matches.forEach(entry => vscode.window.showTextDocument(vscode.Uri.file(entry), { preview: false }));
     }
 
